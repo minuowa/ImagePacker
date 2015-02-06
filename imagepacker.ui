@@ -111,7 +111,7 @@
        <x>0</x>
        <y>0</y>
        <width>311</width>
-       <height>111</height>
+       <height>141</height>
       </rect>
      </property>
      <property name="title">
@@ -121,7 +121,7 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>70</y>
+        <y>100</y>
         <width>311</width>
         <height>31</height>
        </rect>
@@ -136,7 +136,7 @@
         <x>220</x>
         <y>10</y>
         <width>91</width>
-        <height>54</height>
+        <height>83</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -154,6 +154,13 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_4">
+         <property name="text">
+          <string>ProjectFile</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="verticalLayoutWidget">
@@ -162,15 +169,30 @@
         <x>0</x>
         <y>10</y>
         <width>211</width>
-        <height>48</height>
+        <height>81</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <widget class="QComboBox" name="comboBox_Config"/>
+        <widget class="QComboBox" name="comboBox_Config">
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
        <item>
-        <widget class="QComboBox" name="comboBox_Image"/>
+        <widget class="QComboBox" name="comboBox_Image">
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="comboBox_ProjectFile">
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>

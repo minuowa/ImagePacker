@@ -9,65 +9,21 @@
 #include "GText.h"
 #include "GUINode.h"
 
+static const char* gProjectFileExt = "xml";
+
 ImagePacker::ImagePacker ( QWidget *parent )
     : QMainWindow ( parent )
     , mIdleTimeID ( 0 )
 {
     ui.setupUi ( this );
 
-    CXASSERT ( this->acceptDrops() );
+    createMenus();
 
-    mTreeModel = new QStandardItemModel();
-    mFileTree = new FileListTreeView ( ui.dockWidgetContents );
-    mFileTree->setModel ( mTreeModel );
-    mFileTree->setAcceptDrops ( true );
-    ui.horizontalLayout->addWidget ( mFileTree );
+    createFileListPanel();
 
-    ui.dockWidget->setWindowTitle ( "FileList" );
-    ui.dockWidget->setAcceptDrops ( true );
-    ui.dockWidgetContents->setAcceptDrops ( true );
+    createConfigPanel();
 
-    ui.dockWidget_2->setWindowTitle ( "Config" );
-    ui.dockWidget_2->setAcceptDrops ( true );
-    ui.dockWidgetContents_2->setAcceptDrops ( true );
-
-
-    connect ( ui.pushButton_2, SIGNAL ( clicked() ), this, SLOT ( browseConfig() ) );
-    connect ( ui.pushButton_3, SIGNAL ( clicked() ), this, SLOT ( browseImage() ) );
-
-    connect ( ui.pushButton_Save, SIGNAL ( clicked() ), this, SLOT ( saveConfig() ) );
-
-    connect ( mFileTree, SIGNAL ( clicked ( const QModelIndex & ) ), this, SLOT ( onClicked ( const QModelIndex & ) ) );
-
-
-    ui.comboBox_Config->setEditable ( true );
-    ui.comboBox_Image->setEditable ( true );
-
-    mIdleTimeID = startTimer ( 0 );
-
-    gImagePacker.mDelegateAddPath += this;
-    gImagePacker.mDelegateAddTexture += this;
-    gImagePacker.mDelegateAddTextureFailed += this;
-
-
-    mScenePanel = new ScenePanel ( ui.centralWidget );
-    ui.horizontalLayout_Scene->addWidget ( mScenePanel );
-
-    if ( !FiGameDemo_Init ( ( HWND ) ui.centralWidget->winId() ) )
-    {
-        assert ( 0 );
-    }
-    D9DEVICE->setBackColor ( 0 );
-    TextMgr->mDelegateOnDrawTextBegin += this;
-
-    UIMgr->mDelegateHoverNodeChanged += this;
-
-    mCanvos = new TextureCanvos;
-
-    mSelectNode = new GRectNode;
-    mSelectNode->setColor ( Color_Pure_Green );
-    mSelectNode->setState ( eObjState_Render, false );
-    mSelectNode->recreate();
+    createScenePanel();
 }
 
 ImagePacker::~ImagePacker()
@@ -83,7 +39,7 @@ ImagePacker::~ImagePacker()
 
     dSafeDelete ( mCanvos );
 
-	FiGameDemo_ShutDown();
+    FiGameDemo_ShutDown();
 }
 
 
@@ -91,7 +47,7 @@ void ImagePacker::onCallBack ( const CXDelegate& d, CXEventArgs* e )
 {
     if ( d == gImagePacker.mDelegateAddPath )
     {
-        CXAddTexturePathArg* arg = ( CXAddTexturePathArg* ) e;
+        CXAddTextureArg* arg = ( CXAddTextureArg* ) e;
         addPathTexture ( arg );
     }
     else if ( d == gImagePacker.mDelegateAddTexture )
@@ -166,7 +122,10 @@ void ImagePacker::browseConfig()
     if ( !directory.isEmpty() )
     {
         if ( ui.comboBox_Config->findText ( directory ) == -1 )
+        {
             ui.comboBox_Config->addItem ( directory );
+            ui.comboBox_Config->setCurrentText ( directory );
+        }
     }
 }
 
@@ -177,7 +136,10 @@ void ImagePacker::browseImage()
     if ( !directory.isEmpty() )
     {
         if ( ui.comboBox_Image->findText ( directory ) == -1 )
+        {
             ui.comboBox_Image->addItem ( directory );
+            ui.comboBox_Image->setCurrentText ( directory );
+        }
     }
 }
 
@@ -185,12 +147,14 @@ void ImagePacker::saveConfig()
 {
     QString outTextureName = ui.comboBox_Image->currentText();
     QString outTextName = ui.comboBox_Config->currentText();
+    QString outProjectFile = ui.comboBox_ProjectFile->currentText();
 
-    if ( outTextName.isEmpty() || outTextName.isEmpty() )
+    if ( outTextName.isEmpty() || outTextName.isEmpty() || outProjectFile.isEmpty() )
     {
         return;
     }
     gImagePacker.save ( outTextureName.toStdString().c_str(), outTextName.toStdString().c_str(), 1024, 1024, FIF_TARGA );
+    gImagePacker.saveProjectFile ( outProjectFile.toStdString().c_str() );
 }
 
 void ImagePacker::timerEvent ( QTimerEvent * timeevent )
@@ -264,22 +228,23 @@ void ImagePacker::selectTreeItem ( const char* orignalFileName )
 
 }
 
-void ImagePacker::addPathTexture ( CXAddTexturePathArg* arg )
+void ImagePacker::addPathTexture ( CXAddTextureArg* arg )
 {
     QStandardItem *pathItem = 0, *newItem = 0;
     CXFileName filename ( arg->mName );
+    CXFileName parentFile ( arg->mParent );
 
     //已存在
-    if ( findTreeItem ( mTreeModel, filename.GetOrignalName(), newItem ) )
+    if ( findTreeItem ( mTreeModel, filename.GetRelativeFileName(), newItem ) )
     {
         return;
     }
 
     //父目录存在
     newItem = new QStandardItem ( filename.GetFileName() );
-    newItem->setData ( filename.GetOrignalName() );
+    newItem->setData ( filename.GetRelativeFileName() );
     newItem->setEditable ( false );
-    if ( findTreeItem ( mTreeModel, filename.GetAbsolutePath(), pathItem ) )
+    if ( findTreeItem ( mTreeModel, parentFile.GetRelativeFileName(), pathItem ) )
     {
         pathItem->appendRow ( newItem );
     }
@@ -294,20 +259,22 @@ void ImagePacker::directAddTexture ( CXAddTextureArg* arg )
     QStandardItem *pathItem = 0, *newItem = 0;
     GString name, parentPath;
     CXFileName filename ( arg->mName );
-    filename.GetParentPath ( parentPath );
+    CXFileName parentFile ( arg->mParent );
+
     newItem = new QStandardItem ( filename.GetFileName () );
-    newItem->setData ( filename.GetOrignalName() );
+    newItem->setData ( filename.GetRelativeFileName() );
     newItem->setEditable ( false );
-    GTexture* texture = TextureMgr->getResource ( filename.GetOrignalName() );
+
+    GTexture* texture = TextureMgr->getResource ( filename.GetRelativeFileName() );
     if ( texture )
     {
         TextureInfo* info = new TextureInfo;
         info->mImage = texture;
-        info->mTextureDim = gImagePacker.getTexture ( filename.GetOrignalName() );
-        mTextureMap.Insert ( filename.GetOrignalName(), info );
+        info->mTextureDim = gImagePacker.getTexture ( filename.GetRelativeFileName() );
+        mTextureMap.Insert ( filename.GetRelativeFileName(), info );
     }
 
-    if ( findTreeItem ( mTreeModel, filename.GetAbsolutePath(), pathItem ) )
+    if ( findTreeItem ( mTreeModel, parentFile.GetRelativeFileName(), pathItem ) )
     {
         pathItem->appendRow ( newItem );
     }
@@ -348,6 +315,186 @@ for ( auto tex: mTextureMap )
         node->setTexture ( texture->mTextureDim->mFileName.c_str() );
         node->recreate();
         mCanvos->getCanvos()->addChild ( node );
+    }
+}
+
+void ImagePacker::createMenus()
+{
+    createOtherMenus();
+    createRecentFileMenu();
+}
+
+void ImagePacker::newFile()
+{
+
+}
+
+void ImagePacker::open()
+{
+    QString fileName = QFileDialog::getOpenFileName ( this );
+    if ( !fileName.isEmpty() )
+    {
+        loadProject ( fileName.toStdString().c_str() );
+    }
+}
+
+bool ImagePacker::save()
+{
+    return true;
+}
+
+bool ImagePacker::saveAs()
+{
+    return true;
+}
+
+
+void ImagePacker::loadProject ( const char* name )
+{
+
+}
+
+void ImagePacker::createFileListPanel()
+{
+    mTreeModel = new QStandardItemModel();
+    mFileTree = new FileListTreeView ( ui.dockWidgetContents );
+    mFileTree->setModel ( mTreeModel );
+    mFileTree->setAcceptDrops ( true );
+    ui.horizontalLayout->addWidget ( mFileTree );
+
+    ui.dockWidget->setWindowTitle ( "FileList" );
+    ui.dockWidget->setAcceptDrops ( true );
+    ui.dockWidgetContents->setAcceptDrops ( true );
+
+    connect ( mFileTree, SIGNAL ( clicked ( const QModelIndex & ) ), this, SLOT ( onClicked ( const QModelIndex & ) ) );
+}
+
+void ImagePacker::createConfigPanel()
+{
+    ui.dockWidget_2->setWindowTitle ( "Config" );
+    ui.dockWidget_2->setAcceptDrops ( true );
+    ui.dockWidgetContents_2->setAcceptDrops ( true );
+
+    connect ( ui.pushButton_2, SIGNAL ( clicked() ), this, SLOT ( browseConfig() ) );
+	connect ( ui.pushButton_3, SIGNAL ( clicked() ), this, SLOT ( browseImage() ) );
+	connect ( ui.pushButton_4, SIGNAL ( clicked() ), this, SLOT ( browseProject() ) );
+    connect ( ui.pushButton_Save, SIGNAL ( clicked() ), this, SLOT ( saveConfig() ) );
+}
+
+void ImagePacker::createScenePanel()
+{
+    mScenePanel = new ScenePanel ( ui.centralWidget );
+    ui.horizontalLayout_Scene->addWidget ( mScenePanel );
+
+    mIdleTimeID = startTimer ( 0 );
+
+    gImagePacker.mDelegateAddPath += this;
+    gImagePacker.mDelegateAddTexture += this;
+    gImagePacker.mDelegateAddTextureFailed += this;
+
+    if ( !FiGameDemo_Init ( ( HWND ) ui.centralWidget->winId() ) )
+    {
+        assert ( 0 );
+    }
+
+    D9Device->setBackColor ( 0 );
+
+    TextMgr->mDelegateOnDrawTextBegin += this;
+    UIMgr->mDelegateHoverNodeChanged += this;
+
+    mCanvos = new TextureCanvos;
+
+    mSelectNode = new GRectNode;
+    mSelectNode->setColor ( Color_Pure_Green );
+    mSelectNode->setState ( eObjState_Render, false );
+    mSelectNode->recreate();
+}
+
+bool ImagePacker::openRecentFile ( QAction* act )
+{
+    QString text = act->text();
+    if ( !text.isEmpty() )
+    {
+        loadProject ( text.toStdString().c_str() );
+        return true;
+    }
+    return false;
+}
+
+static const char* gRecentFileName = "__recentFile.txt";
+
+void ImagePacker::createRecentFileMenu()
+{
+    std::ifstream ifile ( gRecentFileName );
+    CXBuffer buffer;
+    buffer.setElementByteCount ( 1 );
+    buffer.reAllocate ( 1024 );
+
+    if ( ifile.is_open() )
+    {
+        while ( !ifile.eof() && mRecentFileActions.size() < MaxRecentFiles )
+        {
+            ifile.getline ( buffer.getPointer(), buffer.capacity() );
+            QAction* act = new QAction ( tr ( buffer.getString() ), this );
+            connect ( act, SIGNAL ( triggered ( QAction ) ), this, SLOT ( openRecentFile ( QAction ) ) );
+            fileMenu->addAction ( act );
+            mRecentFileActions.append ( act );
+        }
+    }
+}
+
+void ImagePacker::createOtherMenus()
+{
+    newAct = new QAction ( QIcon ( ":/images/new.png" ), tr ( "&New" ), this );
+    newAct->setShortcuts ( QKeySequence::New );
+    newAct->setStatusTip ( tr ( "Create a new file" ) );
+    connect ( newAct, SIGNAL ( triggered() ), this, SLOT ( newFile() ) );
+
+    //! [19]
+    openAct = new QAction ( QIcon ( ":/images/open.png" ), tr ( "&Open..." ), this );
+    openAct->setShortcuts ( QKeySequence::Open );
+    openAct->setStatusTip ( tr ( "Open an existing file" ) );
+    connect ( openAct, SIGNAL ( triggered() ), this, SLOT ( open() ) );
+    //! [18] //! [19]
+
+    saveAct = new QAction ( QIcon ( ":/images/save.png" ), tr ( "&Save" ), this );
+    saveAct->setShortcuts ( QKeySequence::Save );
+    saveAct->setStatusTip ( tr ( "Save the document to disk" ) );
+    connect ( saveAct, SIGNAL ( triggered() ), this, SLOT ( save() ) );
+
+    saveAsAct = new QAction ( tr ( "Save &As..." ), this );
+    saveAsAct->setShortcuts ( QKeySequence::SaveAs );
+    saveAsAct->setStatusTip ( tr ( "Save the document under a new name" ) );
+    connect ( saveAsAct, SIGNAL ( triggered() ), this, SLOT ( saveAs() ) );
+
+    //! [20]
+    recentAct = new QAction ( tr ( "RecentFiles" ), this );
+    //! [20]
+    recentAct->setStatusTip ( tr ( "RecentFiles" ) );
+
+    fileMenu = menuBar()->addMenu ( tr ( "&File" ) );
+    fileMenu->addAction ( newAct );
+    //! [28]
+    fileMenu->addAction ( openAct );
+    //! [28]
+    fileMenu->addAction ( saveAct );
+    //! [26]
+    fileMenu->addAction ( saveAsAct );
+    fileMenu->addSeparator();
+    fileMenu->addAction ( recentAct );
+}
+
+void ImagePacker::browseProject()
+{
+    QString directory = QFileDialog::getSaveFileName ( this, tr ( "Find Files" ), QDir::currentPath(), "*.xml" );
+
+    if ( !directory.isEmpty() )
+    {
+        if ( ui.comboBox_ProjectFile->findText ( directory ) == -1 )
+        {
+            ui.comboBox_ProjectFile->addItem ( directory );
+            ui.comboBox_ProjectFile->setCurrentText ( directory );
+        }
     }
 }
 

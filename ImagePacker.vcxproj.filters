@@ -91,6 +91,9 @@
     <ClCompile Include="GeneratedFiles\GRelease\moc_FileListTreeView.cpp">
       <Filter>Generated Files\GRelease</Filter>
     </ClCompile>
+    <ClCompile Include="IPTexture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="imagepacker.h">
@@ -135,5 +138,10 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ImagePacker.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="IPTexture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

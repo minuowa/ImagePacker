@@ -167,6 +167,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='GRelease|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="imagepacker.cpp" />
+    <ClCompile Include="IPTexture.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="ScenePanel.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -253,6 +254,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='GRelease|Win32'">.\GeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='GRelease|Win32'">"$(QTDIR)\bin\uic.exe" -o ".\GeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <SubType>Designer</SubType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -435,6 +437,9 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='GRelease|Win32'">
       </AdditionalInputs>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="IPTexture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -96,8 +96,7 @@ for ( GString strFile: strFileList )
                 text = text.right ( text.length() - 1 );
                 CXFileName path ( text.toStdString().c_str() );
                 GString relname;
-                path.GetRelativeFileName ( relname );
-                model()->setData ( idx, relname.c_str() );
+                model()->setData ( idx, path.GetRelativeFileName () );
             }
         }
     }
