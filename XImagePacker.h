@@ -25,37 +25,37 @@ public:
 
     CXDelegate mDelegateAddTexture;
     CXDelegate mDelegateAddPath;
-    CXDelegate mDelegateAddTextureFailed;
+	CXDelegate mDelegateAddTextureFailed;
+	CXDelegate mDelegateSettingImageFile;
 
     XImagePacker ( void );
     ~XImagePacker ( void );
 
     void addPath ( const char* path, bool traverse = true, const char* parent = nullptr );
-    void addTexture ( const char* filename, const char* parent = nullptr );
-    void save ( const char* outTextureName, const char* outTextFile, int outW, int outH, FREE_IMAGE_FORMAT fmt );
-    void saveProjectFile ( const char* name );
-    void loadProjectFile ( const char* name );
-    const std::vector<IPTexture*>& getAllTexture() const;
-
+    void tryToAddTexture ( const char* filename, const char* parent = nullptr );
+    void save ( const char* outTextureName, const char* projectFile );
+    void saveProject ();
+    void loadProject ( const char* name );
+    void setOutFormat ( int w, int h, FREE_IMAGE_FORMAT fmt );
     IPTexture* getTexture ( const char* name );
+	const char* getImageFile();
+	const char* getProjectFile();
 private:
+    bool saveImage();
     void reset();
-
-    void calcSize();
-    void unloadTexture ( IPTexture* texture );
     void sortTextures();
     bool calcPos();
     bool isInCanvos ( const CXRect& rc );
     bool adpotWithRes ( IPTexture* curTexture, std::vector<IPTexture*>& res );
-    bool saveAll();
     void deleteTextureInner ( const char* name );
-	void onAdd ( const char* texName, const char* parent = nullptr );
-	void addTextureTreeNode ( const char* texName, const char* parent = nullptr );
+    bool tryToAddTextureTreeNode ( const char* texName, const char* parent = nullptr );
     static void errorReport ( FREE_IMAGE_FORMAT fif, const char* message );
-	void linkTo(XImageTree::Node* treeNode,CXRapidxmlNode* docNode);
+    void linkTo ( XImageTree::Node* treeNode, CXRapidxmlNode* docNode );
 private:
-    std::string mOutConfigFile;
-    std::string mOutTextureFile;
+    void refillData();
+
+    GString mImageFile;
+    GString mProjectFile;
     int mOutWidth;
     int mOutHeight;
     FREE_IMAGE_FORMAT mOutFormat;

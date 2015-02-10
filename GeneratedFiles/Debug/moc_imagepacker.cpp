@@ -21,7 +21,7 @@
 QT_BEGIN_MOC_NAMESPACE
 struct qt_meta_stringdata_ImagePacker_t {
     QByteArrayData data[12];
-    char stringdata[104];
+    char stringdata[106];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -36,16 +36,16 @@ QT_MOC_LITERAL(2, 20, 0),
 QT_MOC_LITERAL(3, 21, 4),
 QT_MOC_LITERAL(4, 26, 4),
 QT_MOC_LITERAL(5, 31, 6),
-QT_MOC_LITERAL(6, 38, 12),
-QT_MOC_LITERAL(7, 51, 11),
-QT_MOC_LITERAL(8, 63, 13),
-QT_MOC_LITERAL(9, 77, 10),
-QT_MOC_LITERAL(10, 88, 9),
-QT_MOC_LITERAL(11, 98, 5)
+QT_MOC_LITERAL(6, 38, 11),
+QT_MOC_LITERAL(7, 50, 13),
+QT_MOC_LITERAL(8, 64, 10),
+QT_MOC_LITERAL(9, 75, 14),
+QT_MOC_LITERAL(10, 90, 9),
+QT_MOC_LITERAL(11, 100, 5)
     },
     "ImagePacker\0newFile\0\0open\0save\0saveAs\0"
-    "browseConfig\0browseImage\0browseProject\0"
-    "saveConfig\0onClicked\0index"
+    "browseImage\0browseProject\0saveConfig\0"
+    "openRecentFile\0onClicked\0index"
 };
 #undef QT_MOC_LITERAL
 
@@ -81,7 +81,7 @@ static const uint qt_meta_data_ImagePacker[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void,
-    QMetaType::Void,
+    QMetaType::Bool,
     QMetaType::Void, QMetaType::QModelIndex,   11,
 
        0        // eod
@@ -98,10 +98,11 @@ void ImagePacker::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
             if (_a[0]) *reinterpret_cast< bool*>(_a[0]) = _r; }  break;
         case 3: { bool _r = _t->saveAs();
             if (_a[0]) *reinterpret_cast< bool*>(_a[0]) = _r; }  break;
-        case 4: _t->browseConfig(); break;
-        case 5: _t->browseImage(); break;
-        case 6: _t->browseProject(); break;
-        case 7: _t->saveConfig(); break;
+        case 4: _t->browseImage(); break;
+        case 5: _t->browseProject(); break;
+        case 6: _t->saveConfig(); break;
+        case 7: { bool _r = _t->openRecentFile();
+            if (_a[0]) *reinterpret_cast< bool*>(_a[0]) = _r; }  break;
         case 8: _t->onClicked((*reinterpret_cast< const QModelIndex(*)>(_a[1]))); break;
         default: ;
         }

@@ -9,7 +9,12 @@ class IPTextureNode
 {
 public:
     virtual bool isPath();
-
+    const char* getRawName();
+    const char* getDisplayName();
+    void setRawName ( const char* name );
+    void setDisplayName ( const char* name );
+    CXDynaArray<IPTextureNode*>& getChildren();
+protected:
     GString mOrignalName;
     GString mDisplayName;
     CXDynaArray<IPTextureNode*> mChildren;
@@ -17,19 +22,20 @@ public:
 class IPTexture: public IPTextureNode
 {
 public:
-    std::string mFileName;
-    bool mIsPath;
     CXRect mRect;
+
     IPTexture();
     ~IPTexture();
-	virtual bool isPath();
-	FIBITMAP* getData();
+
+    virtual bool isPath();
+    FIBITMAP* getData();
     bool loadData();
     void unloadData();
     void setSize ( int w, int h );
     int getPixelSize();
     int getWByData();
     int getHByData();
+
 private:
     int mPixelSize;
     FIBITMAP* mData;

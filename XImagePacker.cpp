@@ -12,32 +12,18 @@ XImagePacker::XImagePacker ( void )
 {
     mOutWidth = 1024;
     mOutHeight = 1024;
+    mOutFormat = FIF_TARGA;
     // Set FreeImage message handler
     FreeImage_SetOutputMessage ( errorReport );
 }
 
 XImagePacker::~XImagePacker ( void )
 {
-    dSafeDeleteVector ( mTextureArray );
+    mTextureArray.clear();
 }
-
-void XImagePacker::addTexture ( const char* filename, const char* parent /*= nullptr */ )
+bool isOrignalNameTrue ( XImageTree::Node* node, const char* name )
 {
-    IPTexture* texture = new IPTexture;
-    CXFileName xfilename ( filename );
-
-    texture->mFileName = xfilename.GetRelativeFileName();
-    texture->loadData();
-    if ( texture->getData() == nullptr )
-    {
-        delete texture;
-        return;
-    }
-    else
-    {
-        mTextureArray.push_back ( texture );
-    }
-    onAdd ( xfilename.GetRelativeFileName(), parent );
+    return dStrEqual ( node->getData()->getRawName(), name );
 }
 
 
@@ -51,39 +37,24 @@ void XImagePacker::sortTextures()
     std::sort ( mTextureArray.begin(), mTextureArray.end(), compare_texture );
 }
 
-bool XImagePacker::saveAll()
+bool XImagePacker::saveImage()
 {
-    FILE* output_text = 0;
-
-    printf ( "Creating output texture for atlas %s\n", mOutTextureFile.c_str() );
-
     FIBITMAP* output_texture = FreeImage_Allocate ( mOutWidth, mOutHeight, 32, 0, 0, 0 );
 
-    if ( fopen_s ( &output_text, mOutConfigFile.c_str(), "w" ) )
-    {
-        assert ( 0 && "can not open file!" );
-        return false;
-    }
-
     size_t count = mTextureArray.size();
+
     for ( size_t i = 0; i < count; ++i )
     {
         IPTexture* tex = mTextureArray[i];
-        fprintf ( output_text, "\"%s\" %d %d %d\n", tex->mFileName.c_str(), tex->mRect.mX, tex->mRect.mY, tex->getPixelSize() );
         FreeImage_Paste ( output_texture, tex->getData(), tex->mRect.mX, tex->mRect.mY, 255 );
     }
 
-    printf ( "Writing texture atlas to %s\n", mOutTextureFile.c_str() );
-
-    if ( !FreeImage_Save ( mOutFormat, output_texture, mOutTextureFile.c_str(), 0 ) )
+    if ( !FreeImage_Save ( mOutFormat, output_texture, mImageFile.c_str(), 0 ) )
     {
-        fprintf ( stderr, "Unable to save image %s\n", mOutTextureFile.c_str() );
-
         return false;
     }
 
     FreeImage_Unload ( output_texture );
-    fclose ( output_text );
 
     return true;
 }
@@ -95,16 +66,16 @@ void XImagePacker::errorReport ( FREE_IMAGE_FORMAT fif, const char* message )
 
 }
 
-void XImagePacker::save ( const char* outTextureName, const char* outTextFile, int outW, int outH, FREE_IMAGE_FORMAT fmt )
+void XImagePacker::save ( const char* outTextureName, const char* projectFile )
 {
-    mOutTextureFile = outTextureName;
-    mOutConfigFile = outTextFile;
-    mOutWidth = outW;
-    mOutHeight = outH;
-    mOutFormat = fmt;
+    mImageFile = outTextureName;
+    mProjectFile = projectFile;
+
     /** 重新计算一遍 **/
-    onAdd ( nullptr );
-    saveAll();
+    tryToAddTexture ( nullptr );
+
+    saveImage();
+    saveProject();
 }
 
 
@@ -232,19 +203,12 @@ bool XImagePacker::calcPos()
     return true;
 }
 
-const std::vector<IPTexture*>& XImagePacker::getAllTexture() const
-{
-    return mTextureArray;
-}
 
 bool XImagePacker::isInCanvos ( const CXRect& rc )
 {
     return rc.mX >= 0 && rc.mY >= 0 && rc.right() <= mOutWidth && rc.bottom() <= mOutHeight;
 }
-bool isOrignalNameTrue ( XImageTree::Node* node, const char* name )
-{
-    return node->getData()->mOrignalName == name;
-}
+
 void XImagePacker::addPath ( const char* path, bool traverse /*= true*/, const char* parent /*= nullptr */ )
 {
     CXAddTextureArg arg;
@@ -257,8 +221,8 @@ void XImagePacker::addPath ( const char* path, bool traverse /*= true*/, const c
     CXFileName filepath ( path );
 
     IPTextureNode* node = new IPTextureNode;
-    node->mDisplayName = filepath.GetFileName();
-    node->mOrignalName = filepath.GetRelativeFileName();
+    node->setDisplayName ( filepath.GetFileName() );
+    node->setRawName ( filepath.GetRelativeFileName() );
 
     CXTreeNode<IPTextureNode>* treeNode = new CXTreeNode<IPTextureNode>();
     treeNode->setData ( node );
@@ -314,11 +278,11 @@ void XImagePacker::addPath ( const char* path, bool traverse /*= true*/, const c
                 {
                     if ( pather.GetParentPath ( parentPath ) )
                     {
-                        addTexture ( filename.c_str(), pather.GetRelativePath() );
+                        tryToAddTexture ( pather.GetRelativeFileName(), pather.GetRelativePath() );
                     }
                     else
                     {
-                        addTexture ( filename.c_str() );
+                        tryToAddTexture ( pather.GetRelativeFileName() );
                     }
                 }
             }
@@ -331,60 +295,63 @@ void XImagePacker::addPath ( const char* path, bool traverse /*= true*/, const c
 
 IPTexture* XImagePacker::getTexture ( const char* name )
 {
-for ( auto tex: mTextureArray )
+    XImageTree::Node* treeNode = nullptr;
+    if ( mTree.findChild ( treeNode, isOrignalNameTrue, name ) )
     {
-        if ( tex->mFileName == name  )
+        if ( !treeNode->getData()->isPath() )
         {
-            return tex;
+            return ( IPTexture* ) treeNode->getData();
         }
     }
     return nullptr;
 }
 
-void XImagePacker::onAdd ( const char* texName, const char* parent /*= nullptr*/ )
+void XImagePacker::tryToAddTexture ( const char* texName, const char* parent /*= nullptr*/ )
 {
-    sortTextures();
-
     if ( texName != nullptr )
     {
-        if ( calcPos() )
+        if ( tryToAddTextureTreeNode ( texName, parent ) )
         {
-            addTextureTreeNode ( texName, parent );
+            refillData();
 
-            CXAddTextureArg arg;
-            arg.mName = texName;
-            if ( parent != nullptr )
-                arg.mParent = parent;
-            mDelegateAddTexture.trigger ( &arg );
-        }
-        else
-        {
-            deleteTextureInner ( texName );
-            mDelegateAddTextureFailed.trigger ( );
+            sortTextures();
+
+            if ( calcPos() )
+            {
+                CXAddTextureArg arg;
+                arg.mName = texName;
+                if ( parent != nullptr )
+                    arg.mParent = parent;
+                mDelegateAddTexture.trigger ( &arg );
+            }
+            else
+            {
+                deleteTextureInner ( texName );
+                mDelegateAddTextureFailed.trigger ( );
+            }
         }
     }
 }
 
 void XImagePacker::deleteTextureInner ( const char* name )
 {
-    for ( auto i = mTextureArray.begin(); i != mTextureArray.end(); ++i )
-    {
-        auto tex = *i;
-        if ( tex->mFileName == name )
-        {
-            delete tex;
-            mTextureArray.erase ( i );
-            break;
-        }
-    }
+    mTree.deleteChild ( isOrignalNameTrue, name );
 }
 #define _Project "Project"
+#define _OutImage "OutImage"
 #define _Floder "Floder"
 #define _File	"File"
 #define _Name "Name"
+#define _X "x"
+#define _Y "y"
+#define _W "w"
+#define _H "h"
 
-void XImagePacker::saveProjectFile ( const char* name )
+void XImagePacker::saveProject()
 {
+    CXASSERT_RESULT ( !mImageFile.empty() );
+    CXASSERT_RESULT ( !mProjectFile.empty() );
+
     CXRapidxmlDocument doc;
     doc.append_node (
         doc.allocate_node ( rapidxml::node_pi, doc.allocate_string ( "xml version=\"1.0\" encoding=\"UTF-8\"" ) )
@@ -392,40 +359,47 @@ void XImagePacker::saveProjectFile ( const char* name )
     CXRapidxmlNode* root = doc.allocate_node ( rapidxml::node_element );
     root->name ( _Project );
     doc.append_node ( root );
+    CXFileName pathfile ( mImageFile.c_str() );
+
+    CXRapidxmlAttr* attr = doc.allocate_attribute ( _OutImage
+                           , doc.allocate_string ( pathfile.GetRelativeFileName() )
+                                                  );
+    root->append_attribute ( attr );
+
 for ( auto i: mTree.mNodes )
     {
         linkTo ( i, root );
     }
     CXRapidxmlWriter writer;
     writer.AppendChild ( &doc );
-    writer.Write ( name );
+    writer.Write ( mProjectFile.c_str() );
 }
 
 
-void XImagePacker::loadProjectFile ( const char* name )
+void XImagePacker::loadProject ( const char* name )
 {
-    //xml_load ( name );
+    xml_load ( name );
 
-    //xml_get_node ( _FileList )
-    //{
-    //    xml_get_node ( _Floder )
-    //    {
-    //        GString path;
-    //        xml_get_attr ( _Name, path );
-    //        addPath ( path.c_str() );
+    xml_get_attr ( _OutImage, mImageFile );
 
-
-    //        xml_get_node ( _File )
-    //        {
-    //            xml_get_attr ( _Name, )
-    //        }
-    //    }
-    //}
+    xml_get_node ( _Floder )
+    {
+        GString path;
+        xml_get_attr ( _Name, path );
+        addPath ( path.c_str(), false );
+        xml_get_node ( _File )
+        {
+            GString name;
+            xml_get_attr ( _Name, name );
+            tryToAddTexture ( name, path );
+        }
+    }
+    mProjectFile = name;
+    mDelegateSettingImageFile.trigger();
 }
 
 void XImagePacker::reset()
 {
-    mTextureArray.destroy();
     mTree.destroy();
 }
 
@@ -436,13 +410,35 @@ void XImagePacker::linkTo ( XImageTree::Node* treeNode, CXRapidxmlNode* docNode 
         return;
     }
 
-    CXRapidxmlNode* me = docNode->document()->allocate_node ( rapidxml::node_element );
+    CXRapidxmlDocument* doc = docNode->document();
 
-    me->name ( treeNode->getData()->isPath() ? _Floder : _File );
+    CXRapidxmlNode* me = doc->allocate_node ( rapidxml::node_element );
 
-    CXRapidxmlAttr* attrType = docNode->document()->allocate_attribute ( _Name, treeNode->getData()->mOrignalName );
+    bool bpath = treeNode->getData()->isPath();
+
+    me->name ( bpath ? _Floder : _File );
+
+    CXRapidxmlAttr* attrType = doc->allocate_attribute ( _Name, treeNode->getData()->getRawName() );
 
     me->append_attribute ( attrType );
+
+    GString satt;
+    if ( !bpath )
+    {
+        IPTexture* tex = ( IPTexture* ) treeNode->getData();
+        satt.Format ( "%d", tex->mRect.mX );
+        CXRapidxmlAttr* attrX = doc->allocate_attribute ( _X,  doc->allocate_string ( satt.c_str() ) );
+        satt.Format ( "%d", tex->mRect.mY );
+        CXRapidxmlAttr* attrY = doc->allocate_attribute ( _Y, doc->allocate_string ( satt.c_str() ) );
+        satt.Format ( "%d", tex->mRect.mW );
+        CXRapidxmlAttr* attrW = doc->allocate_attribute ( _W, doc->allocate_string ( satt.c_str() ) );
+        satt.Format ( "%d", tex->mRect.mH );
+        CXRapidxmlAttr* attrH = doc->allocate_attribute ( _H, doc->allocate_string ( satt.c_str() ) );
+        me->append_attribute ( attrX );
+        me->append_attribute ( attrY );
+        me->append_attribute ( attrW );
+        me->append_attribute ( attrH );
+    }
 
     docNode->append_node ( me );
 
@@ -452,12 +448,20 @@ for ( auto i: treeNode->mChildren )
     }
 }
 
-void XImagePacker::addTextureTreeNode ( const char* texName, const char* parent /*= nullptr */ )
+bool XImagePacker::tryToAddTextureTreeNode ( const char* texName, const char* parent /*= nullptr */ )
 {
     CXFileName filepath ( texName );
     IPTexture* node = new IPTexture;
-    node->mDisplayName = filepath.GetFileName();
-    node->mOrignalName = filepath.GetRelativeFileName();
+    node->setRawName ( filepath.GetRelativeFileName() );
+    node->setDisplayName ( filepath.GetFileName() );
+    node->loadData();
+
+    if ( node->getData() == nullptr )
+    {
+        delete node;
+        return false;
+    }
+
     CXTreeNode<IPTextureNode>* treeNode = new CXTreeNode<IPTextureNode>();
     treeNode->setData ( node );
     if ( parent != nullptr )
@@ -472,6 +476,38 @@ void XImagePacker::addTextureTreeNode ( const char* texName, const char* parent 
     {
         mTree.mNodes.push_back ( treeNode );
     }
+    return true;
+}
+
+void XImagePacker::refillData()
+{
+    mTextureArray.clear();
+    CXDynaArray<IPTextureNode*> rawArray;
+    mTree.toArray ( rawArray );
+for ( auto i: rawArray )
+    {
+        if ( !i->isPath() )
+        {
+            mTextureArray.push_back ( ( IPTexture* ) i );
+        }
+    }
+}
+
+void XImagePacker::setOutFormat ( int w, int h, FREE_IMAGE_FORMAT fmt )
+{
+    mOutWidth = w;
+    mOutHeight = h;
+    mOutFormat = fmt;
+}
+
+const char* XImagePacker::getImageFile()
+{
+    return mImageFile;
+}
+
+const char* XImagePacker::getProjectFile()
+{
+    return mProjectFile;
 }
 
 
@@ -501,13 +537,13 @@ bool IPTexture::loadData()
 {
     FREE_IMAGE_FORMAT fmt;
 
-    fmt = FreeImage_GetFIFFromFilename ( mFileName.c_str() );
+    fmt = FreeImage_GetFIFFromFilename ( mOrignalName.c_str() );
 
     if ( fmt == FIF_UNKNOWN )
     {
         return false;
     }
-    mData = FreeImage_Load ( fmt, mFileName.c_str(), 0 );
+    mData = FreeImage_Load ( fmt, mOrignalName.c_str(), 0 );
 
     setSize ( getWByData(), getHByData() );
 

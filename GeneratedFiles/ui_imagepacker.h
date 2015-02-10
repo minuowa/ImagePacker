@@ -45,12 +45,10 @@ public:
     QPushButton *pushButton_Save;
     QWidget *verticalLayoutWidget_2;
     QVBoxLayout *verticalLayout_3;
-    QPushButton *pushButton_2;
     QPushButton *pushButton_3;
     QPushButton *pushButton_4;
     QWidget *verticalLayoutWidget;
     QVBoxLayout *verticalLayout_2;
-    QComboBox *comboBox_Config;
     QComboBox *comboBox_Image;
     QComboBox *comboBox_ProjectFile;
 
@@ -58,7 +56,7 @@ public:
     {
         if (ImagePackerClass->objectName().isEmpty())
             ImagePackerClass->setObjectName(QStringLiteral("ImagePackerClass"));
-        ImagePackerClass->resize(1177, 853);
+        ImagePackerClass->resize(1233, 853);
         ImagePackerClass->setAcceptDrops(true);
         centralWidget = new QWidget(ImagePackerClass);
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
@@ -75,7 +73,7 @@ public:
         ImagePackerClass->setCentralWidget(centralWidget);
         menuBar = new QMenuBar(ImagePackerClass);
         menuBar->setObjectName(QStringLiteral("menuBar"));
-        menuBar->setGeometry(QRect(0, 0, 1177, 23));
+        menuBar->setGeometry(QRect(0, 0, 1233, 23));
         ImagePackerClass->setMenuBar(menuBar);
         mainToolBar = new QToolBar(ImagePackerClass);
         mainToolBar->setObjectName(QStringLiteral("mainToolBar"));
@@ -106,29 +104,24 @@ public:
         ImagePackerClass->addDockWidget(static_cast<Qt::DockWidgetArea>(1), dockWidget);
         dockWidget_2 = new QDockWidget(ImagePackerClass);
         dockWidget_2->setObjectName(QStringLiteral("dockWidget_2"));
-        dockWidget_2->setMinimumSize(QSize(316, 818));
+        dockWidget_2->setMinimumSize(QSize(347, 818));
         dockWidget_2->setAllowedAreas(Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea);
         dockWidgetContents_2 = new QWidget();
         dockWidgetContents_2->setObjectName(QStringLiteral("dockWidgetContents_2"));
         groupBox = new QGroupBox(dockWidgetContents_2);
         groupBox->setObjectName(QStringLiteral("groupBox"));
-        groupBox->setGeometry(QRect(0, 0, 311, 141));
+        groupBox->setGeometry(QRect(0, 0, 341, 101));
         pushButton_Save = new QPushButton(groupBox);
         pushButton_Save->setObjectName(QStringLiteral("pushButton_Save"));
-        pushButton_Save->setGeometry(QRect(0, 100, 311, 31));
+        pushButton_Save->setGeometry(QRect(0, 70, 341, 31));
         verticalLayoutWidget_2 = new QWidget(groupBox);
         verticalLayoutWidget_2->setObjectName(QStringLiteral("verticalLayoutWidget_2"));
-        verticalLayoutWidget_2->setGeometry(QRect(220, 10, 91, 83));
+        verticalLayoutWidget_2->setGeometry(QRect(250, 10, 91, 61));
         verticalLayout_3 = new QVBoxLayout(verticalLayoutWidget_2);
         verticalLayout_3->setSpacing(6);
         verticalLayout_3->setContentsMargins(11, 11, 11, 11);
         verticalLayout_3->setObjectName(QStringLiteral("verticalLayout_3"));
         verticalLayout_3->setContentsMargins(0, 0, 0, 0);
-        pushButton_2 = new QPushButton(verticalLayoutWidget_2);
-        pushButton_2->setObjectName(QStringLiteral("pushButton_2"));
-
-        verticalLayout_3->addWidget(pushButton_2);
-
         pushButton_3 = new QPushButton(verticalLayoutWidget_2);
         pushButton_3->setObjectName(QStringLiteral("pushButton_3"));
 
@@ -141,18 +134,12 @@ public:
 
         verticalLayoutWidget = new QWidget(groupBox);
         verticalLayoutWidget->setObjectName(QStringLiteral("verticalLayoutWidget"));
-        verticalLayoutWidget->setGeometry(QRect(0, 10, 211, 81));
+        verticalLayoutWidget->setGeometry(QRect(0, 10, 241, 61));
         verticalLayout_2 = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout_2->setSpacing(6);
         verticalLayout_2->setContentsMargins(11, 11, 11, 11);
         verticalLayout_2->setObjectName(QStringLiteral("verticalLayout_2"));
         verticalLayout_2->setContentsMargins(0, 0, 0, 0);
-        comboBox_Config = new QComboBox(verticalLayoutWidget);
-        comboBox_Config->setObjectName(QStringLiteral("comboBox_Config"));
-        comboBox_Config->setEditable(true);
-
-        verticalLayout_2->addWidget(comboBox_Config);
-
         comboBox_Image = new QComboBox(verticalLayoutWidget);
         comboBox_Image->setObjectName(QStringLiteral("comboBox_Image"));
         comboBox_Image->setEditable(true);
@@ -178,7 +165,6 @@ public:
         ImagePackerClass->setWindowTitle(QApplication::translate("ImagePackerClass", "ImagePacker", 0));
         groupBox->setTitle(QString());
         pushButton_Save->setText(QApplication::translate("ImagePackerClass", "\344\277\235\345\255\230", 0));
-        pushButton_2->setText(QApplication::translate("ImagePackerClass", "XML...", 0));
         pushButton_3->setText(QApplication::translate("ImagePackerClass", "Image...", 0));
         pushButton_4->setText(QApplication::translate("ImagePackerClass", "ProjectFile", 0));
     } // retranslateUi

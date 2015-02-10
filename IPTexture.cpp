@@ -6,6 +6,31 @@ bool IPTextureNode::isPath()
     return true;
 }
 
+const char* IPTextureNode::getRawName()
+{
+    return mOrignalName.c_str();
+}
+
+const char* IPTextureNode::getDisplayName()
+{
+    return mDisplayName.c_str();
+}
+
+void IPTextureNode::setRawName ( const char* name )
+{
+    mOrignalName = name;
+}
+
+void IPTextureNode::setDisplayName ( const char* name )
+{
+    mDisplayName = name;
+}
+
+CXDynaArray<IPTextureNode*>& IPTextureNode::getChildren()
+{
+    return mChildren;
+}
+
 FIBITMAP* IPTexture::getData()
 {
     return mData;

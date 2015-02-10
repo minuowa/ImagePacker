@@ -17,6 +17,9 @@ struct TextureInfo
 };
 class ImagePacker : public QMainWindow, public CXCallBack
 {
+public:
+	static const char* AppName;
+	static const char* Option;
     Q_OBJECT
 
 public:
@@ -25,52 +28,62 @@ public:
 
     virtual void onCallBack ( const CXDelegate& d, CXEventArgs* e );
 protected:
-	void loadProject(const char* name);
-	void createMenus();
-	void createFileListPanel();
-	void createConfigPanel();
-	void createScenePanel();
-	void createRecentFileMenu();
-	void createOtherMenus();
+    void loadProject ( const char* name );
+    void createMenus();
+    void createFileListPanel();
+    void createConfigPanel();
+    void createScenePanel();
+    void createRecentFileMenu();
+    void createOtherMenus();
 
     virtual void timerEvent ( QTimerEvent * );
     bool event ( QEvent * e );
 private slots:
-	void newFile();
-	void open();
-	bool save();
-	bool saveAs();
-    void browseConfig();
+    void newFile();
+    void open();
+    bool save();
+    bool saveAs();
     void browseImage();
-	void browseProject();
+    void browseProject();
     void saveConfig();
+    bool openRecentFile( );
     void onClicked ( const QModelIndex &index );
 private:
     bool findTreeItem ( QStandardItemModel* model, const char* fileOrPath, QStandardItem*& outItem );
     bool findItem ( QStandardItem* item, const char* fileOrPath, QStandardItem*& outItem );
     void drawAllTextures();
 
-	bool getItemString(const CXRect& rc, GString& str);
+    bool getItemString ( const CXRect& rc, GString& str );
 
     void selectTreeItem ( const char* orignalFileName );
 
-	void onCalTexturePos();
-	void addPathTexture(CXAddTextureArg* arg);
-	void directAddTexture(CXAddTextureArg* arg);
-	void onChangeHoveredNode(GUIHoverNodeChangedEvent* arg);
-	bool openRecentFile( QAction* act );
-	QString mCurFile;
+    void onCalTexturePos();
+    void addPathTexture ( CXAddTextureArg* arg );
+    void directAddTexture ( CXAddTextureArg* arg );
+    void onChangeHoveredNode ( GUIHoverNodeChangedEvent* arg );
 
-	static const u32 MaxRecentFiles=20;
+	void updateRecentFileActions();
+	QString strippedName(const QString &fullFileName);
+	    void setCurrentFile(const QString &fileName);
+private:
 
-	QList<QAction*> mRecentFileActions;
+	QSettings mOptionSetting;
 
-	QMenu *fileMenu;
-	QAction *newAct;
-	QAction *openAct;
-	QAction *saveAct;
-	QAction *saveAsAct;
-	QAction *recentAct;
+
+    enum { MaxRecentFiles = 20 };
+    QAction *recentFileActs[MaxRecentFiles];
+	QAction *separatorAct;
+
+    QString mCurFile;
+
+
+    QList<QAction*> mRecentFileActions;
+
+    QMenu *fileMenu;
+    QAction *newAct;
+    QAction *openAct;
+    QAction *saveAct;
+    QAction *saveAsAct;
 
     Ui::ImagePackerClass ui;
 

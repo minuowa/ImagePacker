@@ -67,7 +67,8 @@ for ( GString strFile: strFileList )
                     }
                     else
                     {
-                        gImagePacker.addTexture ( strFile );
+						CXFileName xfilename ( strFile );
+						gImagePacker.tryToAddTexture ( xfilename.GetRelativeFileName() );
                     }
                 }
             }

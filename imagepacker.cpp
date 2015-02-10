@@ -9,12 +9,13 @@
 #include "GText.h"
 #include "GUINode.h"
 
-static const char* gProjectFileExt = "xml";
 
 ImagePacker::ImagePacker ( QWidget *parent )
     : QMainWindow ( parent )
     , mIdleTimeID ( 0 )
+    , mOptionSetting ( AppName, Option )
 {
+
     ui.setupUi ( this );
 
     createMenus();
@@ -33,6 +34,7 @@ ImagePacker::~ImagePacker()
     gImagePacker.mDelegateAddPath -= this;
     gImagePacker.mDelegateAddTexture -= this;
     gImagePacker.mDelegateAddTextureFailed -= this;
+    gImagePacker.mDelegateSettingImageFile -= this;
 
     TextMgr->mDelegateOnDrawTextBegin -= this;
     UIMgr->mDelegateHoverNodeChanged -= this;
@@ -59,6 +61,11 @@ void ImagePacker::onCallBack ( const CXDelegate& d, CXEventArgs* e )
     else if ( d == gImagePacker.mDelegateAddTextureFailed )
     {
         QMessageBox::warning ( nullptr, "", "Canvos is to small!" );
+    }
+    else if ( d == gImagePacker.mDelegateSettingImageFile )
+    {
+        ui.comboBox_ProjectFile->setCurrentText ( gImagePacker.getProjectFile() );
+        ui.comboBox_Image->setCurrentText ( gImagePacker.getImageFile() );
     }
     else if ( TextMgr->mDelegateOnDrawTextBegin == d )
     {
@@ -115,19 +122,6 @@ bool ImagePacker::findItem ( QStandardItem* item, const char* fileOrPath, QStand
     return false;
 }
 
-void ImagePacker::browseConfig()
-{
-    QString directory = QFileDialog::getSaveFileName ( this, tr ( "Find Files" ), QDir::currentPath(), "*.xml" );
-
-    if ( !directory.isEmpty() )
-    {
-        if ( ui.comboBox_Config->findText ( directory ) == -1 )
-        {
-            ui.comboBox_Config->addItem ( directory );
-            ui.comboBox_Config->setCurrentText ( directory );
-        }
-    }
-}
 
 void ImagePacker::browseImage()
 {
@@ -146,15 +140,13 @@ void ImagePacker::browseImage()
 void ImagePacker::saveConfig()
 {
     QString outTextureName = ui.comboBox_Image->currentText();
-    QString outTextName = ui.comboBox_Config->currentText();
     QString outProjectFile = ui.comboBox_ProjectFile->currentText();
 
-    if ( outTextName.isEmpty() || outTextName.isEmpty() || outProjectFile.isEmpty() )
+    if ( outTextureName.isEmpty()  || outProjectFile.isEmpty() )
     {
         return;
     }
-    gImagePacker.save ( outTextureName.toStdString().c_str(), outTextName.toStdString().c_str(), 1024, 1024, FIF_TARGA );
-    gImagePacker.saveProjectFile ( outProjectFile.toStdString().c_str() );
+    gImagePacker.save ( outTextureName.toStdString().c_str(), outProjectFile.toStdString().c_str() );
 }
 
 void ImagePacker::timerEvent ( QTimerEvent * timeevent )
@@ -216,7 +208,7 @@ for ( auto tex: mTextureMap )
         TextureInfo* texture = tex.second;
         if ( texture->mTextureDim->mRect == rc )
         {
-            str = texture->mTextureDim->mFileName;
+            str = texture->mTextureDim->getRawName();
             return true;
         }
     }
@@ -296,8 +288,7 @@ void ImagePacker::onChangeHoveredNode ( GUIHoverNodeChangedEvent* arg )
             QStandardItem* newItem = nullptr;
             if ( findTreeItem ( mTreeModel, str.c_str(), newItem ) )
             {
-                newItem->setCheckState ( Qt::CheckState::Checked );
-                //mTreeModel->
+                newItem->setForeground ( Qt::BDiagPattern );
             }
         }
     }
@@ -312,7 +303,7 @@ for ( auto tex: mTextureMap )
         TextureInfo* texture = tex.second;
         GUINode* node = new GUINode;
         node->setRect ( texture->mTextureDim->mRect );
-        node->setTexture ( texture->mTextureDim->mFileName.c_str() );
+        node->setTexture ( texture->mTextureDim->getRawName() );
         node->recreate();
         mCanvos->getCanvos()->addChild ( node );
     }
@@ -351,7 +342,7 @@ bool ImagePacker::saveAs()
 
 void ImagePacker::loadProject ( const char* name )
 {
-
+    gImagePacker.loadProject ( name );
 }
 
 void ImagePacker::createFileListPanel()
@@ -375,9 +366,8 @@ void ImagePacker::createConfigPanel()
     ui.dockWidget_2->setAcceptDrops ( true );
     ui.dockWidgetContents_2->setAcceptDrops ( true );
 
-    connect ( ui.pushButton_2, SIGNAL ( clicked() ), this, SLOT ( browseConfig() ) );
-	connect ( ui.pushButton_3, SIGNAL ( clicked() ), this, SLOT ( browseImage() ) );
-	connect ( ui.pushButton_4, SIGNAL ( clicked() ), this, SLOT ( browseProject() ) );
+    connect ( ui.pushButton_3, SIGNAL ( clicked() ), this, SLOT ( browseImage() ) );
+    connect ( ui.pushButton_4, SIGNAL ( clicked() ), this, SLOT ( browseProject() ) );
     connect ( ui.pushButton_Save, SIGNAL ( clicked() ), this, SLOT ( saveConfig() ) );
 }
 
@@ -391,6 +381,7 @@ void ImagePacker::createScenePanel()
     gImagePacker.mDelegateAddPath += this;
     gImagePacker.mDelegateAddTexture += this;
     gImagePacker.mDelegateAddTextureFailed += this;
+    gImagePacker.mDelegateSettingImageFile += this;
 
     if ( !FiGameDemo_Init ( ( HWND ) ui.centralWidget->winId() ) )
     {
@@ -410,9 +401,10 @@ void ImagePacker::createScenePanel()
     mSelectNode->recreate();
 }
 
-bool ImagePacker::openRecentFile ( QAction* act )
+bool ImagePacker::openRecentFile (  )
 {
-    QString text = act->text();
+    QAction *action = qobject_cast<QAction *> ( sender() );
+    QString text = action->data().toString();
     if ( !text.isEmpty() )
     {
         loadProject ( text.toStdString().c_str() );
@@ -421,26 +413,23 @@ bool ImagePacker::openRecentFile ( QAction* act )
     return false;
 }
 
-static const char* gRecentFileName = "__recentFile.txt";
+static const char* gRecentFileName = "__imagepacker_recentFile";
 
 void ImagePacker::createRecentFileMenu()
 {
-    std::ifstream ifile ( gRecentFileName );
-    CXBuffer buffer;
-    buffer.setElementByteCount ( 1 );
-    buffer.reAllocate ( 1024 );
+    separatorAct = fileMenu->addSeparator();
 
-    if ( ifile.is_open() )
+    for ( int i = 0; i < MaxRecentFiles; ++i )
     {
-        while ( !ifile.eof() && mRecentFileActions.size() < MaxRecentFiles )
-        {
-            ifile.getline ( buffer.getPointer(), buffer.capacity() );
-            QAction* act = new QAction ( tr ( buffer.getString() ), this );
-            connect ( act, SIGNAL ( triggered ( QAction ) ), this, SLOT ( openRecentFile ( QAction ) ) );
-            fileMenu->addAction ( act );
-            mRecentFileActions.append ( act );
-        }
+        recentFileActs[i] = new QAction ( this );
+        recentFileActs[i]->setVisible ( false );
+        connect ( recentFileActs[i], SIGNAL ( triggered() ),
+                  this, SLOT ( openRecentFile() ) );
     }
+    for ( int i = 0; i < MaxRecentFiles; ++i )
+        fileMenu->addAction ( recentFileActs[i] );
+
+    updateRecentFileActions();
 }
 
 void ImagePacker::createOtherMenus()
@@ -467,11 +456,6 @@ void ImagePacker::createOtherMenus()
     saveAsAct->setStatusTip ( tr ( "Save the document under a new name" ) );
     connect ( saveAsAct, SIGNAL ( triggered() ), this, SLOT ( saveAs() ) );
 
-    //! [20]
-    recentAct = new QAction ( tr ( "RecentFiles" ), this );
-    //! [20]
-    recentAct->setStatusTip ( tr ( "RecentFiles" ) );
-
     fileMenu = menuBar()->addMenu ( tr ( "&File" ) );
     fileMenu->addAction ( newAct );
     //! [28]
@@ -481,7 +465,6 @@ void ImagePacker::createOtherMenus()
     //! [26]
     fileMenu->addAction ( saveAsAct );
     fileMenu->addSeparator();
-    fileMenu->addAction ( recentAct );
 }
 
 void ImagePacker::browseProject()
@@ -494,9 +477,59 @@ void ImagePacker::browseProject()
         {
             ui.comboBox_ProjectFile->addItem ( directory );
             ui.comboBox_ProjectFile->setCurrentText ( directory );
+            setCurrentFile ( directory );
         }
     }
 }
+
+void ImagePacker::updateRecentFileActions()
+{
+    QStringList files = mOptionSetting.value ( gRecentFileName ).toStringList();
+
+    int numRecentFiles = qMin ( files.size(), ( int ) MaxRecentFiles );
+
+    for ( int i = 0; i < numRecentFiles; ++i )
+    {
+        QString text = tr ( "&%1 %2" ).arg ( i + 1 ).arg ( strippedName ( files[i] ) );
+        recentFileActs[i]->setText ( text );
+        recentFileActs[i]->setData ( files[i] );
+        recentFileActs[i]->setVisible ( true );
+    }
+    for ( int j = numRecentFiles; j < MaxRecentFiles; ++j )
+        recentFileActs[j]->setVisible ( false );
+
+    separatorAct->setVisible ( numRecentFiles > 0 );
+}
+
+QString ImagePacker::strippedName ( const QString &fullFileName )
+{
+    return QFileInfo ( fullFileName ).fileName();
+}
+
+void ImagePacker::setCurrentFile ( const QString &fileName )
+{
+    mCurFile = fileName;
+    setWindowFilePath ( mCurFile );
+
+    QStringList files = mOptionSetting.value ( gRecentFileName ).toStringList();
+    files.removeAll ( fileName );
+    files.prepend ( fileName );
+    while ( files.size() > MaxRecentFiles )
+        files.removeLast();
+
+    mOptionSetting.setValue ( gRecentFileName, files );
+
+    updateRecentFileActions();
+    //foreach (QWidget *widget, QApplication::topLevelWidgets()) {
+    //	MainWindow *mainWin = qobject_cast<MainWindow *>(widget);
+    //	if (mainWin)
+    //		mainWin->updateRecentFileActions();
+    //}
+}
+
+const char* ImagePacker::Option = "Option";
+
+const char* ImagePacker::AppName = "ImagePacker";
 
 TextureInfo::TextureInfo()
 {
