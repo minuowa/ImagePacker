@@ -201,18 +201,17 @@ for ( auto tex: mTextureMap )
 }
 
 
-bool ImagePacker::getItemString ( const CXRect& rc, GString& str )
+TextureInfo* ImagePacker::getItemString ( const CXRect& rc )
 {
 for ( auto tex: mTextureMap )
     {
         TextureInfo* texture = tex.second;
         if ( texture->mTextureDim->mRect == rc )
         {
-            str = texture->mTextureDim->getRawName();
-            return true;
+            return texture;
         }
     }
-    return false;
+    return nullptr;
 }
 
 void ImagePacker::selectTreeItem ( const char* orignalFileName )
@@ -278,18 +277,25 @@ void ImagePacker::directAddTexture ( CXAddTextureArg* arg )
 
 void ImagePacker::onChangeHoveredNode ( GUIHoverNodeChangedEvent* arg )
 {
+    mScenePanel->clearSelect();
+
     mSelectNode->setState ( eObjState_Render, arg->mNewNode != nullptr );
     if ( arg->mNewNode && arg->mNewNode->getRect() != mSelectNode->getRect() )
     {
         mSelectNode->setRect ( arg->mNewNode->getRect() );
         GString str;
-        if ( getItemString ( arg->mNewNode->getRect(), str ) )
+        TextureInfo* info = getItemString ( arg->mNewNode->getRect() );
+        if ( info != nullptr )
         {
-            QStandardItem* newItem = nullptr;
-            if ( findTreeItem ( mTreeModel, str.c_str(), newItem ) )
-            {
-                newItem->setForeground ( Qt::BDiagPattern );
-            }
+            mScenePanel->setSelect ( info->mTextureDim->getDisplayName() );
+            CXRect rc = info->mTextureDim->mRect;
+            GString str;
+            str.Format ( "Name: %s", info->mTextureDim->getDisplayName() );
+            ui.label_name->setText ( str.c_str() );
+            str.Format ( "X:%d, Y:%d, R:%d, B:%d", rc.mX, rc.mY, rc.right(), rc.bottom() );
+            ui.label_pos->setText ( str.c_str() );
+            str.Format ( "W:%d, H:%d", rc.mW, rc.mH );
+            ui.label_wh->setText ( str.c_str() );
         }
     }
 }
@@ -331,6 +337,7 @@ void ImagePacker::open()
 
 bool ImagePacker::save()
 {
+    gImagePacker.saveProject();
     return true;
 }
 
@@ -520,12 +527,8 @@ void ImagePacker::setCurrentFile ( const QString &fileName )
     mOptionSetting.setValue ( gRecentFileName, files );
 
     updateRecentFileActions();
-    //foreach (QWidget *widget, QApplication::topLevelWidgets()) {
-    //	MainWindow *mainWin = qobject_cast<MainWindow *>(widget);
-    //	if (mainWin)
-    //		mainWin->updateRecentFileActions();
-    //}
 }
+
 
 const char* ImagePacker::Option = "Option";
 

@@ -274,9 +274,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="ImagePacker.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="XImagePacker.h">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </Command>
@@ -440,6 +437,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="IPTexture.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

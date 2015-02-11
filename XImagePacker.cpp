@@ -361,9 +361,10 @@ void XImagePacker::saveProject()
     doc.append_node ( root );
     CXFileName pathfile ( mImageFile.c_str() );
 
-    CXRapidxmlAttr* attr = doc.allocate_attribute ( _OutImage
-                           , doc.allocate_string ( pathfile.GetRelativeFileName() )
-                                                  );
+    CXRapidxmlAttr* attr = doc.allocate_attribute (
+                               _OutImage
+                               , doc.allocate_string ( pathfile.GetRelativeFileName() )
+                           );
     root->append_attribute ( attr );
 
 for ( auto i: mTree.mNodes )

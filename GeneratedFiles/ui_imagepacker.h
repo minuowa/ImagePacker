@@ -18,10 +18,10 @@
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLabel>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QToolBar>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
@@ -33,8 +33,6 @@ public:
     QWidget *centralWidget;
     QVBoxLayout *verticalLayout_4;
     QHBoxLayout *horizontalLayout_Scene;
-    QMenuBar *menuBar;
-    QToolBar *mainToolBar;
     QDockWidget *dockWidget;
     QWidget *dockWidgetContents;
     QVBoxLayout *verticalLayout;
@@ -51,6 +49,11 @@ public:
     QVBoxLayout *verticalLayout_2;
     QComboBox *comboBox_Image;
     QComboBox *comboBox_ProjectFile;
+    QGroupBox *groupBox_2;
+    QLabel *label_pos;
+    QLabel *label_wh;
+    QLabel *label_name;
+    QMenuBar *menuBar;
 
     void setupUi(QMainWindow *ImagePackerClass)
     {
@@ -71,13 +74,6 @@ public:
         verticalLayout_4->addLayout(horizontalLayout_Scene);
 
         ImagePackerClass->setCentralWidget(centralWidget);
-        menuBar = new QMenuBar(ImagePackerClass);
-        menuBar->setObjectName(QStringLiteral("menuBar"));
-        menuBar->setGeometry(QRect(0, 0, 1233, 23));
-        ImagePackerClass->setMenuBar(menuBar);
-        mainToolBar = new QToolBar(ImagePackerClass);
-        mainToolBar->setObjectName(QStringLiteral("mainToolBar"));
-        ImagePackerClass->addToolBar(Qt::TopToolBarArea, mainToolBar);
         dockWidget = new QDockWidget(ImagePackerClass);
         dockWidget->setObjectName(QStringLiteral("dockWidget"));
         QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -152,8 +148,24 @@ public:
 
         verticalLayout_2->addWidget(comboBox_ProjectFile);
 
+        groupBox_2 = new QGroupBox(dockWidgetContents_2);
+        groupBox_2->setObjectName(QStringLiteral("groupBox_2"));
+        groupBox_2->setGeometry(QRect(0, 100, 341, 91));
+        label_pos = new QLabel(groupBox_2);
+        label_pos->setObjectName(QStringLiteral("label_pos"));
+        label_pos->setGeometry(QRect(10, 40, 231, 21));
+        label_wh = new QLabel(groupBox_2);
+        label_wh->setObjectName(QStringLiteral("label_wh"));
+        label_wh->setGeometry(QRect(10, 70, 231, 16));
+        label_name = new QLabel(groupBox_2);
+        label_name->setObjectName(QStringLiteral("label_name"));
+        label_name->setGeometry(QRect(10, 20, 321, 16));
         dockWidget_2->setWidget(dockWidgetContents_2);
         ImagePackerClass->addDockWidget(static_cast<Qt::DockWidgetArea>(2), dockWidget_2);
+        menuBar = new QMenuBar(ImagePackerClass);
+        menuBar->setObjectName(QStringLiteral("menuBar"));
+        menuBar->setGeometry(QRect(0, 0, 1233, 23));
+        ImagePackerClass->setMenuBar(menuBar);
 
         retranslateUi(ImagePackerClass);
 
@@ -167,6 +179,10 @@ public:
         pushButton_Save->setText(QApplication::translate("ImagePackerClass", "\344\277\235\345\255\230", 0));
         pushButton_3->setText(QApplication::translate("ImagePackerClass", "Image...", 0));
         pushButton_4->setText(QApplication::translate("ImagePackerClass", "ProjectFile", 0));
+        groupBox_2->setTitle(QApplication::translate("ImagePackerClass", "GroupBox", 0));
+        label_pos->setText(QString());
+        label_wh->setText(QString());
+        label_name->setText(QString());
     } // retranslateUi
 
 };

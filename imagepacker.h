@@ -18,8 +18,8 @@ struct TextureInfo
 class ImagePacker : public QMainWindow, public CXCallBack
 {
 public:
-	static const char* AppName;
-	static const char* Option;
+    static const char* AppName;
+    static const char* Option;
     Q_OBJECT
 
 public:
@@ -27,6 +27,7 @@ public:
     ~ImagePacker();
 
     virtual void onCallBack ( const CXDelegate& d, CXEventArgs* e );
+
 protected:
     void loadProject ( const char* name );
     void createMenus();
@@ -51,9 +52,8 @@ private slots:
 private:
     bool findTreeItem ( QStandardItemModel* model, const char* fileOrPath, QStandardItem*& outItem );
     bool findItem ( QStandardItem* item, const char* fileOrPath, QStandardItem*& outItem );
-    void drawAllTextures();
 
-    bool getItemString ( const CXRect& rc, GString& str );
+    TextureInfo* getItemString ( const CXRect& rc );
 
     void selectTreeItem ( const char* orignalFileName );
 
@@ -62,17 +62,17 @@ private:
     void directAddTexture ( CXAddTextureArg* arg );
     void onChangeHoveredNode ( GUIHoverNodeChangedEvent* arg );
 
-	void updateRecentFileActions();
-	QString strippedName(const QString &fullFileName);
-	    void setCurrentFile(const QString &fileName);
+    void updateRecentFileActions();
+    QString strippedName ( const QString &fullFileName );
+    void setCurrentFile ( const QString &fileName );
 private:
 
-	QSettings mOptionSetting;
+    QSettings mOptionSetting;
 
 
     enum { MaxRecentFiles = 20 };
     QAction *recentFileActs[MaxRecentFiles];
-	QAction *separatorAct;
+    QAction *separatorAct;
 
     QString mCurFile;
 
@@ -98,6 +98,7 @@ private:
     TextureCanvos* mCanvos;
 
     GRectNode* mSelectNode;
+
 
     int mIdleTimeID;
 };

@@ -5,7 +5,6 @@
 TextureCanvos::TextureCanvos ( void )
     : mUI ( nullptr )
 {
-    mTexture = nullptr;
     recreate();
 }
 
@@ -26,10 +25,6 @@ void TextureCanvos::setPos ( int x, int y )
 {
     const CXRect& rc = mUI->getRect();
     mUI->setRect ( x, y, rc.mW, rc.mH );
-}
-
-void TextureCanvos::draw()
-{
 }
 
 void TextureCanvos::recreate()

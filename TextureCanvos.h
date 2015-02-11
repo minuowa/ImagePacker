@@ -2,6 +2,11 @@
 #include "XImagePacker.h"
 class GTexture;
 class GUINode;
+//-------------------------------------------------------------------------
+/**
+	@brief »­²¼
+	@author nnboy,2015/02/11
+*/
 class TextureCanvos
 {
 public:
@@ -10,11 +15,9 @@ public:
 
 	void setSize(int w,int h);
 	void setPos(int x,int y);
-	void draw();
 	void recreate();
 	GUINode* getCanvos();
 protected:
-	GTexture* mTexture;
 	GUINode* mUI;
 };
 

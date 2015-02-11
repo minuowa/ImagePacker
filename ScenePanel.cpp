@@ -3,10 +3,17 @@
 #include "GGameDemoHeader.h"
 #include "GGame.h"
 
-ScenePanel::ScenePanel(QWidget *parent)
-	: QWidget(parent)
+ScenePanel::ScenePanel ( QWidget *parent )
+    : QWidget ( parent )
 {
-	ui.setupUi(this);
+    ui.setupUi ( this );
+    mMainMenu = new QMenu ( this );
+    QAction* act = new QAction ( tr ( "&CopyName" ), this );
+    act->setStatusTip ( tr ( "Copy Name to clipboard" ) );
+    connect ( act, SIGNAL ( triggered() ), this, SLOT ( copyNameToClipboard() ) );
+    mMainMenu->addAction ( act );
+
+    this->setContextMenuPolicy ( Qt::ActionsContextMenu );
 }
 
 ScenePanel::~ScenePanel()
@@ -14,9 +21,39 @@ ScenePanel::~ScenePanel()
 
 }
 
-void ScenePanel::resizeEvent( QResizeEvent *szEvent )
+void ScenePanel::resizeEvent ( QResizeEvent *szEvent )
 {
-	__super::resizeEvent ( szEvent );
-	QRect rc = this->rect();
-	TheGame->resize ( rc.width(), rc.height() );
+    __super::resizeEvent ( szEvent );
+    QRect rc = this->rect();
+    TheGame->resize ( rc.width(), rc.height() );
+}
+bool ScenePanel::event ( QEvent* event )
+{
+    switch ( event->type() )
+    {
+    case QEvent::ContextMenu:
+    {
+        QContextMenuEvent* menuEvent = ( QContextMenuEvent* ) event;
+        CXASSERT ( mMainMenu );
+        mMainMenu->exec ( menuEvent->globalPos() );
+    }
+    break;
+    }
+    return __super::event ( event );
+}
+
+void ScenePanel::copyNameToClipboard()
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText ( mSelectNodeName.c_str() );
+}
+
+void ScenePanel::clearSelect()
+{
+    mSelectNodeName.clear();
+}
+
+void ScenePanel::setSelect ( const char* name )
+{
+    mSelectNodeName = name;
 }
