@@ -25,7 +25,7 @@ void ScenePanel::resizeEvent ( QResizeEvent *szEvent )
 {
     __super::resizeEvent ( szEvent );
     QRect rc = this->rect();
-    TheGame->resize ( rc.width(), rc.height() );
+     Content::Game.resize ( rc.width(), rc.height() );
 }
 bool ScenePanel::event ( QEvent* event )
 {

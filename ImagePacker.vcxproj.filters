@@ -135,13 +135,11 @@
     <CustomBuild Include="GeneratedFiles\ui_ScenePanel.h">
       <Filter>Generated Files</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="IPTexture.h">
+    <CustomBuild Include="IPTexture.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
+    </CustomBuild>
+    <CustomBuild Include="resource.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
+    </CustomBuild>
   </ItemGroup>
 </Project>

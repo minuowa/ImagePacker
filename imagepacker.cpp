@@ -2,20 +2,17 @@
 #include "imagepacker.h"
 #include "XImagePacker.h"
 #include "FileListTreeView.h"
-#include "FiGameDemo.h"
 #include "GGameDemoHeader.h"
 #include "GGame.h"
 #include "ScenePanel.h"
 #include "GText.h"
 #include "GUINode.h"
 
-
 ImagePacker::ImagePacker ( QWidget *parent )
     : QMainWindow ( parent )
     , mIdleTimeID ( 0 )
     , mOptionSetting ( AppName, Option )
 {
-
     ui.setupUi ( this );
 
     createMenus();
@@ -36,12 +33,12 @@ ImagePacker::~ImagePacker()
     gImagePacker.mDelegateAddTextureFailed -= this;
     gImagePacker.mDelegateSettingImageFile -= this;
 
-    TextMgr->mDelegateOnDrawTextBegin -= this;
-    UIMgr->mDelegateHoverNodeChanged -= this;
+    Content::Text.mDelegateOnDrawTextBegin -= this;
+    Content::UIMgr.mDelegateHoverNodeChanged -= this;
 
     dSafeDelete ( mCanvos );
 
-    FiGameDemo_ShutDown();
+    Content::Game.shutDown();
 }
 
 
@@ -67,11 +64,11 @@ void ImagePacker::onCallBack ( const CXDelegate& d, CXEventArgs* e )
         ui.comboBox_ProjectFile->setCurrentText ( gImagePacker.getProjectFile() );
         ui.comboBox_Image->setCurrentText ( gImagePacker.getImageFile() );
     }
-    else if ( TextMgr->mDelegateOnDrawTextBegin == d )
+    else if ( Content::Text.mDelegateOnDrawTextBegin == d )
     {
         mSelectNode->draw();
     }
-    else if ( d == UIMgr->mDelegateHoverNodeChanged )
+    else if ( d == Content::UIMgr.mDelegateHoverNodeChanged )
     {
         GUIHoverNodeChangedEvent* arg = ( GUIHoverNodeChangedEvent* ) e;
         onChangeHoveredNode ( arg );
@@ -153,7 +150,7 @@ void ImagePacker::timerEvent ( QTimerEvent * timeevent )
 {
     if ( timeevent->timerId() == mIdleTimeID )
     {
-        if ( !FiGameDemo_Update() )
+        if ( !Content::Game.loop() )
         {
             close();
         }
@@ -169,12 +166,12 @@ bool ImagePacker::event ( QEvent * event )
     {
     case  QEvent::WindowActivate:
     {
-        TheGame->active ( true );
+        Content::Game.active ( true );
     }
     break;
     case QEvent::WindowDeactivate :
     {
-        TheGame->active ( false );
+        Content::Game.active ( false );
     }
     break;
     default:
@@ -256,7 +253,7 @@ void ImagePacker::directAddTexture ( CXAddTextureArg* arg )
     newItem->setData ( filename.GetRelativeFileName() );
     newItem->setEditable ( false );
 
-    GTexture* texture = TextureMgr->getResource ( filename.GetRelativeFileName() );
+    GTexture* texture =  Content::TextureMgr.getResource ( filename.GetRelativeFileName() );
     if ( texture )
     {
         TextureInfo* info = new TextureInfo;
@@ -390,15 +387,15 @@ void ImagePacker::createScenePanel()
     gImagePacker.mDelegateAddTextureFailed += this;
     gImagePacker.mDelegateSettingImageFile += this;
 
-    if ( !FiGameDemo_Init ( ( HWND ) ui.centralWidget->winId() ) )
+    if ( !Content::Game.init ( ( HWND ) ui.centralWidget->winId() ) )
     {
         assert ( 0 );
     }
 
-    D9Device->setBackColor ( 0 );
+    Content::Device.setBackColor ( 0 );
 
-    TextMgr->mDelegateOnDrawTextBegin += this;
-    UIMgr->mDelegateHoverNodeChanged += this;
+    Content::Text.mDelegateOnDrawTextBegin += this;
+    Content::UIMgr.mDelegateHoverNodeChanged += this;
 
     mCanvos = new TextureCanvos;
 
