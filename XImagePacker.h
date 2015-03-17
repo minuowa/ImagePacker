@@ -27,12 +27,13 @@ public:
     CXDelegate mDelegateAddPath;
 	CXDelegate mDelegateAddTextureFailed;
 	CXDelegate mDelegateSettingImageFile;
+	CXDelegate mDelegateClear;
 
     XImagePacker ( void );
     ~XImagePacker ( void );
 
     void addPath ( const char* path, bool traverse = true, const char* parent = nullptr );
-    void tryToAddTexture ( const char* filename, const char* parent = nullptr );
+	bool tryToAddTexture ( const char* texName, const char* parent = nullptr );
     void save ( const char* outTextureName, const char* projectFile );
     void saveProject ();
     void loadProject ( const char* name );

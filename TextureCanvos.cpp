@@ -29,7 +29,7 @@ void TextureCanvos::setPos ( int x, int y )
 
 void TextureCanvos::recreate()
 {
-    getUIRootNode()->deleteChild ( mUI );
+    this->clear();
     mUI = new GUINode;
     mUI->setRect ( 0, 0, 1024, 1024 );
     mUI->setColor ( 0X66666666 );
@@ -40,4 +40,13 @@ void TextureCanvos::recreate()
 GUINode* TextureCanvos::getCanvos()
 {
     return mUI;
+}
+
+void TextureCanvos::clear()
+{
+    if ( mUI )
+    {
+        getUIRootNode()->deleteChild ( mUI );
+        mUI = nullptr;
+    }
 }

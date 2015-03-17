@@ -306,7 +306,7 @@ IPTexture* XImagePacker::getTexture ( const char* name )
     return nullptr;
 }
 
-void XImagePacker::tryToAddTexture ( const char* texName, const char* parent /*= nullptr*/ )
+bool XImagePacker::tryToAddTexture ( const char* texName, const char* parent /*= nullptr */ )
 {
     if ( texName != nullptr )
     {
@@ -328,13 +328,27 @@ void XImagePacker::tryToAddTexture ( const char* texName, const char* parent /*=
             {
                 deleteTextureInner ( texName );
                 mDelegateAddTextureFailed.trigger ( );
+                return false;
             }
         }
+        else
+        {
+            return false;
+        }
     }
+    return true;
 }
 
 void XImagePacker::deleteTextureInner ( const char* name )
 {
+for ( auto i: mTextureArray )
+    {
+        if ( dStrEqual ( name, i->getRawName() ) )
+        {
+            mTextureArray.remove ( i );
+            break;
+        }
+    }
     mTree.deleteChild ( isOrignalNameTrue, name );
 }
 #define _Project "Project"
@@ -379,6 +393,8 @@ for ( auto i: mTree.mNodes )
 
 void XImagePacker::loadProject ( const char* name )
 {
+	this->reset();
+
     xml_load ( name );
 
     xml_get_attr ( _OutImage, mImageFile );
@@ -395,6 +411,12 @@ void XImagePacker::loadProject ( const char* name )
             tryToAddTexture ( name, path );
         }
     }
+    xml_get_node ( _File )
+    {
+        GString name;
+        xml_get_attr ( _Name, name );
+        tryToAddTexture ( name );
+    }
     mProjectFile = name;
     mDelegateSettingImageFile.trigger();
 }
@@ -402,6 +424,8 @@ void XImagePacker::loadProject ( const char* name )
 void XImagePacker::reset()
 {
     mTree.destroy();
+	mTextureArray.clear();
+	mDelegateClear.trigger();
 }
 
 void XImagePacker::linkTo ( XImageTree::Node* treeNode, CXRapidxmlNode* docNode )

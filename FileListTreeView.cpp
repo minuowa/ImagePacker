@@ -67,8 +67,19 @@ for ( GString strFile: strFileList )
                     }
                     else
                     {
-						CXFileName xfilename ( strFile );
-						gImagePacker.tryToAddTexture ( xfilename.GetRelativeFileName() );
+                        CXFileName xfilename ( strFile );
+                        if ( dStrLen ( xfilename.GetRelativeFileName() ) == 0 )
+                        {
+                            QTextCodec *codec = QTextCodec::codecForLocale();
+                            QString str = codec->toUnicode ( "资源必须和该程序在同一硬盘分区中！" );
+                            event->acceptProposedAction();
+                            QMessageBox::warning ( this, "", str );
+                        }
+                        else
+                        {
+                            if ( !gImagePacker.tryToAddTexture ( xfilename.GetRelativeFileName() ) )
+                                break;
+                        }
                     }
                 }
             }

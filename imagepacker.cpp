@@ -31,7 +31,8 @@ ImagePacker::~ImagePacker()
     gImagePacker.mDelegateAddPath -= this;
     gImagePacker.mDelegateAddTexture -= this;
     gImagePacker.mDelegateAddTextureFailed -= this;
-    gImagePacker.mDelegateSettingImageFile -= this;
+	gImagePacker.mDelegateSettingImageFile -= this;
+	gImagePacker.mDelegateClear -= this;
 
     Content::Text.mDelegateOnDrawTextBegin -= this;
     Content::UIMgr.mDelegateHoverNodeChanged -= this;
@@ -57,12 +58,21 @@ void ImagePacker::onCallBack ( const CXDelegate& d, CXEventArgs* e )
     }
     else if ( d == gImagePacker.mDelegateAddTextureFailed )
     {
-        QMessageBox::warning ( nullptr, "", "Canvos is to small!" );
+        QTextCodec *codec = QTextCodec::codecForLocale();
+        QString str = codec->toUnicode ( "画布太小，放不了这么多图片！" );
+        QMessageBox::warning ( nullptr, "", str );
     }
     else if ( d == gImagePacker.mDelegateSettingImageFile )
     {
         ui.comboBox_ProjectFile->setCurrentText ( gImagePacker.getProjectFile() );
         ui.comboBox_Image->setCurrentText ( gImagePacker.getImageFile() );
+    }
+    else if ( d == gImagePacker.mDelegateClear )
+    {
+		mSelectNode->setState ( eObjState_Render, false );
+		mCanvos->clear();
+		mTextureMap.destroySecond();
+		mTreeModel->clear();
     }
     else if ( Content::Text.mDelegateOnDrawTextBegin == d )
     {
@@ -386,6 +396,7 @@ void ImagePacker::createScenePanel()
     gImagePacker.mDelegateAddTexture += this;
     gImagePacker.mDelegateAddTextureFailed += this;
     gImagePacker.mDelegateSettingImageFile += this;
+	gImagePacker.mDelegateClear += this;
 
     if ( !Content::Game.init ( ( HWND ) ui.centralWidget->winId() ) )
     {

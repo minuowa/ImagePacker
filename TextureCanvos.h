@@ -16,6 +16,7 @@ public:
 	void setSize(int w,int h);
 	void setPos(int x,int y);
 	void recreate();
+	void clear();
 	GUINode* getCanvos();
 protected:
 	GUINode* mUI;
