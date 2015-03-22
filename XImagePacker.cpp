@@ -27,7 +27,7 @@ bool isOrignalNameTrue ( XImageTree::Node* node, const char* name )
 }
 
 
-bool compare_texture ( IPTexture* lhs, IPTexture* rhs )
+bool compare_texture ( IPTextureNode* lhs, IPTextureNode* rhs )
 {
     return lhs->mRect.area() > rhs->mRect.area();
 }
@@ -45,7 +45,7 @@ bool XImagePacker::saveImage()
 
     for ( size_t i = 0; i < count; ++i )
     {
-        IPTexture* tex = mTextureArray[i];
+        IPTexture* tex = ( IPTexture* ) mTextureArray[i];
         FreeImage_Paste ( output_texture, tex->getData(), tex->mRect.mX, tex->mRect.mY, 255 );
     }
 
@@ -167,7 +167,7 @@ bool XImagePacker::calcPos()
     size_t cnt = mTextureArray.size();
     for ( size_t i = 0; i < cnt; ++i )
     {
-        IPTexture* curTexture = mTextureArray[i];
+        IPTexture* curTexture = ( IPTexture* ) mTextureArray[i];
         curTexture->mRect.mX = 0;
         curTexture->mRect.mY = 0;
         if ( !isInCanvos ( curTexture->mRect ) )
@@ -181,7 +181,7 @@ bool XImagePacker::calcPos()
 
     for ( size_t i = 0; i < cnt; ++i )
     {
-        IPTexture* curTexture = mTextureArray[i];
+        IPTexture* curTexture = ( IPTexture* ) mTextureArray[i];
         if ( !isInCanvos ( curTexture->mRect ) )
         {
             //assert ( 0 && "Canvos is to small!" );
@@ -229,15 +229,13 @@ void XImagePacker::addPath ( const char* path, bool traverse /*= true*/, const c
 
     if ( parent != nullptr )
     {
-        CXTreeNode<IPTextureNode>* parentNode = nullptr;
-        if ( mTree.findChild ( parentNode, isOrignalNameTrue, parent ) )
-        {
+        CXTreeNode<IPTextureNode>* parentNode = getNodeInTree ( parent );
+        if ( parentNode )
             parentNode->addChild ( treeNode );
-        }
     }
     else
     {
-        mTree.mNodes.push_back ( treeNode );
+        mTree.add ( treeNode );
     }
 
     if ( !traverse )
@@ -295,8 +293,8 @@ void XImagePacker::addPath ( const char* path, bool traverse /*= true*/, const c
 
 IPTexture* XImagePacker::getTexture ( const char* name )
 {
-    XImageTree::Node* treeNode = nullptr;
-    if ( mTree.findChild ( treeNode, isOrignalNameTrue, name ) )
+    XImageTree::Node* treeNode = getNodeInTree ( name );
+    if ( treeNode )
     {
         if ( !treeNode->getData()->isPath() )
         {
@@ -380,8 +378,8 @@ void XImagePacker::saveProject()
                                , doc.allocate_string ( pathfile.GetRelativeFileName() )
                            );
     root->append_attribute ( attr );
-
-for ( auto i: mTree.mNodes )
+    auto nodes = mTree.getNodes();
+for ( auto i: nodes )
     {
         linkTo ( i, root );
     }
@@ -390,20 +388,19 @@ for ( auto i: mTree.mNodes )
     writer.Write ( mProjectFile.c_str() );
 }
 
-
-void XImagePacker::loadProject ( const char* name )
+bool XImagePacker::loadNode ( CXRapidxmlNode* _node, const GString& parentPath )
 {
-	this->reset();
-
-    xml_load ( name );
-
-    xml_get_attr ( _OutImage, mImageFile );
-
+    if ( _node == nullptr )
+        return false;
+    CXXMLNodeStack _nodeStack;
+    const char* parentP = parentPath.isEmpty() ? nullptr : parentPath.c_str();
     xml_get_node ( _Floder )
     {
         GString path;
         xml_get_attr ( _Name, path );
-        addPath ( path.c_str(), false );
+        addPath ( path.c_str(), false, parentP );
+        if ( !loadNode ( _node, path ) )
+            return false;
         xml_get_node ( _File )
         {
             GString name;
@@ -415,22 +412,56 @@ void XImagePacker::loadProject ( const char* name )
     {
         GString name;
         xml_get_attr ( _Name, name );
-        tryToAddTexture ( name );
+        tryToAddTexture ( name, parentP );
     }
+    return true;
+}
+bool XImagePacker::loadProject ( const char* name )
+{
+    this->reset();
+    CXRapidxmlLoader loader ( name );
+    CXASSERT ( loader.loadFile() );
+    CXXMLNodeStack _nodeStack;
+    CXRapidxmlNode* _node = loader.getRootNode();
+
+    xml_get_attr ( _OutImage, mImageFile );
+
+    if ( !loadNode ( _node ) )
+        return false;
+
+    //xml_get_node ( _Floder )
+    //{
+    //    GString path;
+    //    xml_get_attr ( _Name, path );
+    //    addPath ( path.c_str(), false );
+    //    xml_get_node ( _File )
+    //    {
+    //        GString name;
+    //        xml_get_attr ( _Name, name );
+    //        tryToAddTexture ( name, path );
+    //    }
+    //}
+    //xml_get_node ( _File )
+    //{
+    //    GString name;
+    //    xml_get_attr ( _Name, name );
+    //    tryToAddTexture ( name );
+    //}
     mProjectFile = name;
-    mDelegateSettingImageFile.trigger();
+    mDelegateLoadSuccessed.trigger();
+    return true;
 }
 
 void XImagePacker::reset()
 {
     mTree.destroy();
-	mTextureArray.clear();
-	mDelegateClear.trigger();
+    mTextureArray.clear();
+    mDelegateClear.trigger();
 }
 
 void XImagePacker::linkTo ( XImageTree::Node* treeNode, CXRapidxmlNode* docNode )
 {
-    if ( treeNode->getData()->isPath() && treeNode->mChildren.empty() )
+    if ( treeNode->getData()->isPath() && treeNode->childCount() == 0 )
     {
         return;
     }
@@ -466,8 +497,8 @@ void XImagePacker::linkTo ( XImageTree::Node* treeNode, CXRapidxmlNode* docNode 
     }
 
     docNode->append_node ( me );
-
-for ( auto i: treeNode->mChildren )
+    auto children = treeNode->children();
+for ( auto i: children )
     {
         linkTo ( i, me );
     }
@@ -475,6 +506,9 @@ for ( auto i: treeNode->mChildren )
 
 bool XImagePacker::tryToAddTextureTreeNode ( const char* texName, const char* parent /*= nullptr */ )
 {
+    if ( getNodeInTree ( texName ) )
+        return false;
+
     CXFileName filepath ( texName );
     IPTexture* node = new IPTexture;
     node->setRawName ( filepath.GetRelativeFileName() );
@@ -491,15 +525,13 @@ bool XImagePacker::tryToAddTextureTreeNode ( const char* texName, const char* pa
     treeNode->setData ( node );
     if ( parent != nullptr )
     {
-        CXTreeNode<IPTextureNode>* parentNode = nullptr;
-        if ( mTree.findChild ( parentNode, isOrignalNameTrue, parent ) )
-        {
+        CXTreeNode<IPTextureNode>* parentNode = getNodeInTree ( parent );
+        if ( parentNode )
             parentNode->addChild ( treeNode );
-        }
     }
     else
     {
-        mTree.mNodes.push_back ( treeNode );
+        mTree.add ( treeNode );
     }
     return true;
 }
@@ -534,6 +566,45 @@ const char* XImagePacker::getProjectFile()
 {
     return mProjectFile;
 }
+
+CXTreeNode<IPTextureNode>* XImagePacker::getNodeInTree ( const char* filename )
+{
+    CXFileName filepath ( filename );
+    CXTreeNode<IPTextureNode>* node = nullptr;
+    mTree.findChild ( node, isOrignalNameTrue, filepath.GetRelativeFileName() );
+    return node;
+}
+
+void XImagePacker::deleteImage ( const char* name )
+{
+    CXTreeNode<IPTextureNode>* node = nullptr;
+    if ( mTree.findChild ( node, isOrignalNameTrue, name ) )
+    {
+        deleteTextureInner ( name );
+        refillData();
+        sortTextures();
+        CXASSERT_RETURN ( calcPos() );
+
+        CXDeleteTextureArg arg;
+        arg.mName = name;
+        gImagePacker.mDelegateDeleteTexture.trigger ( &arg );
+    }
+}
+bool isRectTrue ( XImageTree::Node* node, const CXRect& rc )
+{
+    return node->getData()->mRect == rc;
+}
+IPTextureNode* XImagePacker::getImageByRect ( const CXRect& rect )
+{
+    XImageTree::Node* child = nullptr;
+    if ( mTree.findChild ( child, isRectTrue, rect ) )
+    {
+        return child->getData();
+    }
+    return nullptr;
+}
+
+
 
 
 

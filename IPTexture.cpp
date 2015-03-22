@@ -19,6 +19,7 @@ const char* IPTextureNode::getDisplayName()
 void IPTextureNode::setRawName ( const char* name )
 {
     mOrignalName = name;
+    mIsPath = dIsPath ( name );
 }
 
 void IPTextureNode::setDisplayName ( const char* name )
@@ -29,6 +30,12 @@ void IPTextureNode::setDisplayName ( const char* name )
 CXDynaArray<IPTextureNode*>& IPTextureNode::getChildren()
 {
     return mChildren;
+}
+
+IPTextureNode::IPTextureNode()
+    : mIsPath ( false )
+{
+
 }
 
 FIBITMAP* IPTexture::getData()
@@ -60,5 +67,5 @@ int IPTexture::getHByData()
 
 bool IPTexture::isPath()
 {
-    return false;
+    return dIsPath ( mOrignalName );
 }

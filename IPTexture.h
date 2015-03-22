@@ -8,21 +8,23 @@
 class IPTextureNode
 {
 public:
+	IPTextureNode();
     virtual bool isPath();
     const char* getRawName();
     const char* getDisplayName();
     void setRawName ( const char* name );
     void setDisplayName ( const char* name );
     CXDynaArray<IPTextureNode*>& getChildren();
+	CXRect mRect;
 protected:
-    GString mOrignalName;
+	GString mOrignalName;
     GString mDisplayName;
     CXDynaArray<IPTextureNode*> mChildren;
+	bool mIsPath;
 };
 class IPTexture: public IPTextureNode
 {
 public:
-    CXRect mRect;
 
     IPTexture();
     ~IPTexture();

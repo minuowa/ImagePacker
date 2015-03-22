@@ -2,6 +2,7 @@
 #include "FileListTreeView.h"
 #include <sys\stat.h>
 #include "XImagePacker.h"
+#include "imagepacker.h"
 
 static const char* FileFlag = "file:///";
 
@@ -9,6 +10,13 @@ FileListTreeView::FileListTreeView ( QWidget *parent )
     : QTreeView ( parent )
 {
     ui.setupUi ( this );
+    setContextMenuPolicy ( Qt::ActionsContextMenu );
+
+    mMainMenu = new QMenu ( this );
+    mMainMenu->addAction ( tr ( "&Delete(Ctrl+D)" ), this, SLOT ( deleteImage() ) );
+
+    QShortcut* shortcut = new QShortcut ( QKeySequence ( Qt::CTRL + Qt::Key_D ), this );
+    connect ( shortcut, SIGNAL ( activated() ), this, SLOT ( deleteImage() ) );
 }
 
 FileListTreeView::~FileListTreeView()
@@ -70,10 +78,8 @@ for ( GString strFile: strFileList )
                         CXFileName xfilename ( strFile );
                         if ( dStrLen ( xfilename.GetRelativeFileName() ) == 0 )
                         {
-                            QTextCodec *codec = QTextCodec::codecForLocale();
-                            QString str = codec->toUnicode ( "资源必须和该程序在同一硬盘分区中！" );
                             event->acceptProposedAction();
-                            QMessageBox::warning ( this, "", str );
+                            QMessageBox::warning ( this, "", qtToUnicode ( "资源必须和该程序在同一硬盘分区中！" ) );
                         }
                         else
                         {
@@ -133,4 +139,49 @@ void FileListTreeView::selectItem ( QStandardItem* item )
 {
     //setSelection(item->isDragEnabled())
 }
+bool FileListTreeView::event ( QEvent* event )
+{
+    switch ( event->type() )
+    {
+    case QEvent::ContextMenu:
+    {
+        QString obj = getSelectImage();
+        if ( !obj.isEmpty() )
+        {
+            QContextMenuEvent* menuEvent = ( QContextMenuEvent* ) event;
+            CXASSERT ( mMainMenu );
+            mMainMenu->exec ( menuEvent->globalPos() );
 
+        }
+    }
+    break;
+    }
+    return __super::event ( event );
+}
+
+void FileListTreeView::deleteImage()
+{
+    QString obj = getSelectImage();
+    if ( !obj.isEmpty() )
+    {
+        gImagePacker.deleteImage ( obj.toStdString().c_str() );
+    }
+}
+
+QString FileListTreeView::getSelectImage() const
+{
+    QItemSelectionModel *selectModel = this->selectionModel();
+    if ( selectModel )
+    {
+        QModelIndex index = selectModel->currentIndex();
+        QStandardItemModel* itemModel = ( QStandardItemModel* ) this->model();
+        QStandardItem* item = itemModel->itemFromIndex ( index );
+        if ( item )
+        {
+            QVariant obj = item->data();
+            CXASSERT ( obj.type() == QVariant::String );
+            return obj.toString();
+        }
+    }
+    return "";
+}

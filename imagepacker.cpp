@@ -12,7 +12,10 @@ ImagePacker::ImagePacker ( QWidget *parent )
     : QMainWindow ( parent )
     , mIdleTimeID ( 0 )
     , mOptionSetting ( AppName, Option )
+    , mSelectNode ( nullptr )
 {
+    mInstance = this;
+
     ui.setupUi ( this );
 
     createMenus();
@@ -26,62 +29,91 @@ ImagePacker::ImagePacker ( QWidget *parent )
 
 ImagePacker::~ImagePacker()
 {
-    mTextureMap.destroySecond();
-
     gImagePacker.mDelegateAddPath -= this;
     gImagePacker.mDelegateAddTexture -= this;
+    gImagePacker.mDelegateDeleteTexture -= this;
     gImagePacker.mDelegateAddTextureFailed -= this;
-	gImagePacker.mDelegateSettingImageFile -= this;
-	gImagePacker.mDelegateClear -= this;
+    gImagePacker.mDelegateLoadSuccessed -= this;
+    gImagePacker.mDelegateClear -= this;
 
     Content::Text.mDelegateOnDrawTextBegin -= this;
-    Content::UIMgr.mDelegateHoverNodeChanged -= this;
+    Content::UIMgr.mDelegateNodeClicked -= this;
+    Content::InputSystem.mDelegateMouseDownAndMoved -= this;
+    Content::InputSystem.mDelegateMouseDown -= this;
+    Content::InputSystem.mDelegateMouseUp -= this;
 
     dSafeDelete ( mCanvos );
 
     Content::Game.shutDown();
 }
 
-
 void ImagePacker::onCallBack ( const CXDelegate& d, CXEventArgs* e )
 {
     if ( d == gImagePacker.mDelegateAddPath )
     {
         CXAddTextureArg* arg = ( CXAddTextureArg* ) e;
-        addPathTexture ( arg );
+        onAddPath ( arg );
     }
     else if ( d == gImagePacker.mDelegateAddTexture )
     {
         CXAddTextureArg* arg = ( CXAddTextureArg* ) e;
-        directAddTexture ( arg );
+        onAddTexture ( arg );
+        onCalTexturePos();
+    }
+    else if ( d == gImagePacker.mDelegateDeleteTexture )
+    {
+        CXDeleteTextureArg* arg = ( CXDeleteTextureArg* ) e;
+        onDeleteTexture ( arg );
+        //mTextureMap.deleteChild ( isOrignalNameTrue, arg->mName );
+        mSelectNode->setState ( eObjState_Render, false );
         onCalTexturePos();
     }
     else if ( d == gImagePacker.mDelegateAddTextureFailed )
     {
-        QTextCodec *codec = QTextCodec::codecForLocale();
-        QString str = codec->toUnicode ( "画布太小，放不了这么多图片！" );
-        QMessageBox::warning ( nullptr, "", str );
+        QMessageBox::warning ( nullptr, "", qtToUnicode ( "画布太小，放不了这么多图片！" ) );
     }
-    else if ( d == gImagePacker.mDelegateSettingImageFile )
+    else if ( d == gImagePacker.mDelegateLoadSuccessed )
     {
         ui.comboBox_ProjectFile->setCurrentText ( gImagePacker.getProjectFile() );
         ui.comboBox_Image->setCurrentText ( gImagePacker.getImageFile() );
+        if ( !mCanvos->getCanvos() )
+            mCanvos->recreate();
     }
     else if ( d == gImagePacker.mDelegateClear )
     {
-		mSelectNode->setState ( eObjState_Render, false );
-		mCanvos->clear();
-		mTextureMap.destroySecond();
-		mTreeModel->clear();
+        this->clear();
     }
     else if ( Content::Text.mDelegateOnDrawTextBegin == d )
     {
         mSelectNode->draw();
     }
-    else if ( d == Content::UIMgr.mDelegateHoverNodeChanged )
+    else if ( d == Content::UIMgr.mDelegateNodeClicked )
     {
-        GUIHoverNodeChangedEvent* arg = ( GUIHoverNodeChangedEvent* ) e;
-        onChangeHoveredNode ( arg );
+        GUINode* node = Content::UIMgr.getCapture();
+        onClickedNode ( node );
+    }
+    else if ( d == Content::InputSystem.mDelegateMouseDownAndMoved )
+    {
+        if ( Content::InputSystem.isPressingButton ( eButtonType_LeftButton ) )
+        {
+            POINT pt = Content::InputSystem.GetMouseMove();
+            mCanvos->offset ( pt.x, pt.y );
+            mSelectNode->offset ( pt.x, pt.y );
+        }
+    }
+    else if ( d == Content::InputSystem.mDelegateMouseDown )
+    {
+        if ( Content::InputSystem.isButtonDown ( eButtonType_LeftButton ) )
+        {
+            setCursor ( QCursor ( Qt::SizeAllCursor ) );
+        }
+    }
+    else if ( d == Content::InputSystem.mDelegateMouseUp )
+    {
+        if ( Content::InputSystem.isButtonUp ( eButtonType_LeftButton ) )
+        {
+            setCursor ( QCursor ( Qt::ArrowCursor ) );
+        }
     }
 }
 
@@ -190,43 +222,8 @@ bool ImagePacker::event ( QEvent * event )
     return __super::event ( event );
 }
 
-void ImagePacker::onClicked ( const QModelIndex &index )
-{
-    QStandardItem* item = mTreeModel->itemFromIndex ( index );
-    CXASSERT ( item );
-    QVariant var = item->data();
-    GString str = var.toString().toStdString();
-for ( auto tex: mTextureMap )
-    {
-        TextureInfo* texture = tex.second;
-        texture->mSelected = false;
-        if ( tex.first.equal ( str ) )
-        {
-            texture->mSelected = true;
-        }
-    }
-}
 
-
-TextureInfo* ImagePacker::getItemString ( const CXRect& rc )
-{
-for ( auto tex: mTextureMap )
-    {
-        TextureInfo* texture = tex.second;
-        if ( texture->mTextureDim->mRect == rc )
-        {
-            return texture;
-        }
-    }
-    return nullptr;
-}
-
-void ImagePacker::selectTreeItem ( const char* orignalFileName )
-{
-
-}
-
-void ImagePacker::addPathTexture ( CXAddTextureArg* arg )
+void ImagePacker::onAddPath ( CXAddTextureArg* arg )
 {
     QStandardItem *pathItem = 0, *newItem = 0;
     CXFileName filename ( arg->mName );
@@ -252,7 +249,7 @@ void ImagePacker::addPathTexture ( CXAddTextureArg* arg )
     }
 }
 
-void ImagePacker::directAddTexture ( CXAddTextureArg* arg )
+void ImagePacker::onAddTexture ( CXAddTextureArg* arg )
 {
     QStandardItem *pathItem = 0, *newItem = 0;
     GString name, parentPath;
@@ -262,15 +259,6 @@ void ImagePacker::directAddTexture ( CXAddTextureArg* arg )
     newItem = new QStandardItem ( filename.GetFileName () );
     newItem->setData ( filename.GetRelativeFileName() );
     newItem->setEditable ( false );
-
-    GTexture* texture =  Content::TextureMgr.getResource ( filename.GetRelativeFileName() );
-    if ( texture )
-    {
-        TextureInfo* info = new TextureInfo;
-        info->mImage = texture;
-        info->mTextureDim = gImagePacker.getTexture ( filename.GetRelativeFileName() );
-        mTextureMap.Insert ( filename.GetRelativeFileName(), info );
-    }
 
     if ( findTreeItem ( mTreeModel, parentFile.GetRelativeFileName(), pathItem ) )
     {
@@ -282,44 +270,49 @@ void ImagePacker::directAddTexture ( CXAddTextureArg* arg )
     }
 }
 
-void ImagePacker::onChangeHoveredNode ( GUIHoverNodeChangedEvent* arg )
+void ImagePacker::onClickedNode ( GUINode* node )
 {
     mScenePanel->clearSelect();
-
-    mSelectNode->setState ( eObjState_Render, arg->mNewNode != nullptr );
-    if ( arg->mNewNode && arg->mNewNode->getRect() != mSelectNode->getRect() )
+    mSelectNode->setState ( eObjState_Render, false );
+    IPTextureNode* info = gImagePacker.getImageByRect ( node->getRelRect() );
+    if ( info != nullptr )
     {
-        mSelectNode->setRect ( arg->mNewNode->getRect() );
-        GString str;
-        TextureInfo* info = getItemString ( arg->mNewNode->getRect() );
-        if ( info != nullptr )
+        selectNode ( info->getRawName() );
+
+        QStandardItem* treeItem = nullptr;
+        if ( findItem ( mTreeModel->invisibleRootItem(), info->getRawName(), treeItem ) )
         {
-            mScenePanel->setSelect ( info->mTextureDim->getDisplayName() );
-            CXRect rc = info->mTextureDim->mRect;
-            GString str;
-            str.Format ( "Name: %s", info->mTextureDim->getDisplayName() );
-            ui.label_name->setText ( str.c_str() );
-            str.Format ( "X:%d, Y:%d, R:%d, B:%d", rc.mX, rc.mY, rc.right(), rc.bottom() );
-            ui.label_pos->setText ( str.c_str() );
-            str.Format ( "W:%d, H:%d", rc.mW, rc.mH );
-            ui.label_wh->setText ( str.c_str() );
+            if ( treeItem->parent() )
+            {
+                QStandardItem* parItem = treeItem->parent();
+                while ( parItem )
+                {
+                    mFileTree->expand ( parItem->index() );
+                    parItem = parItem->parent();
+                }
+            }
+            QItemSelectionModel* selectionModel = mFileTree->selectionModel();
+            selectionModel->select ( treeItem->index(), QItemSelectionModel::SelectionFlag::ClearAndSelect );
         }
     }
 }
-
+void traverseForCreateUINode ( XImageTree::Node* n,  void*  win )
+{
+    IPTextureNode* texture = n->getData();
+    if ( !texture->isPath() )
+    {
+        GUINode* node = new GUINode;
+        node->setRelRect ( texture->mRect );
+        node->setTexture ( texture->getRawName() );
+        node->setName ( texture->getRawName() );
+        node->recreate();
+        ( ( ImagePacker* ) win )->getCanvos()->getCanvos()->addChild ( node );
+    }
+}
 void ImagePacker::onCalTexturePos()
 {
     mCanvos->recreate();
-
-for ( auto tex: mTextureMap )
-    {
-        TextureInfo* texture = tex.second;
-        GUINode* node = new GUINode;
-        node->setRect ( texture->mTextureDim->mRect );
-        node->setTexture ( texture->mTextureDim->getRawName() );
-        node->recreate();
-        mCanvos->getCanvos()->addChild ( node );
-    }
+    gImagePacker.textureInforaverse ( traverseForCreateUINode, ( void* ) this );
 }
 
 void ImagePacker::createMenus()
@@ -330,7 +323,8 @@ void ImagePacker::createMenus()
 
 void ImagePacker::newFile()
 {
-
+    gImagePacker.reset();
+    mCanvos->recreate();
 }
 
 void ImagePacker::open()
@@ -356,7 +350,11 @@ bool ImagePacker::saveAs()
 
 void ImagePacker::loadProject ( const char* name )
 {
-    gImagePacker.loadProject ( name );
+    if ( !gImagePacker.loadProject ( name ) )
+    {
+        QMessageBox::warning ( nullptr, "", qtToUnicode ( "加载文件失败！" ) );
+        mCanvos->recreate();
+    }
 }
 
 void ImagePacker::createFileListPanel()
@@ -371,7 +369,12 @@ void ImagePacker::createFileListPanel()
     ui.dockWidget->setAcceptDrops ( true );
     ui.dockWidgetContents->setAcceptDrops ( true );
 
-    connect ( mFileTree, SIGNAL ( clicked ( const QModelIndex & ) ), this, SLOT ( onClicked ( const QModelIndex & ) ) );
+    //connect ( mFileTree, SIGNAL ( clicked ( const QModelIndex & ) ), this, SLOT ( onClicked ( const QModelIndex & ) ) );
+
+    QItemSelectionModel* selectionModel = mFileTree->selectionModel();
+    bool res = connect ( selectionModel, SIGNAL ( selectionChanged ( const QItemSelection &, const QItemSelection & ) ),
+                         this, SLOT ( onSelectionChanged ( const QItemSelection &, const QItemSelection & ) ) );
+    CXASSERT ( res );
 }
 
 void ImagePacker::createConfigPanel()
@@ -394,23 +397,29 @@ void ImagePacker::createScenePanel()
 
     gImagePacker.mDelegateAddPath += this;
     gImagePacker.mDelegateAddTexture += this;
+    gImagePacker.mDelegateDeleteTexture += this;
     gImagePacker.mDelegateAddTextureFailed += this;
-    gImagePacker.mDelegateSettingImageFile += this;
-	gImagePacker.mDelegateClear += this;
+    gImagePacker.mDelegateLoadSuccessed += this;
+    gImagePacker.mDelegateClear += this;
 
     if ( !Content::Game.init ( ( HWND ) ui.centralWidget->winId() ) )
     {
         assert ( 0 );
     }
 
-    Content::Device.setBackColor ( 0 );
+
+    Content::Device.setBackColor ( 0X55FF9999 );
 
     Content::Text.mDelegateOnDrawTextBegin += this;
-    Content::UIMgr.mDelegateHoverNodeChanged += this;
+    Content::UIMgr.mDelegateNodeClicked += this;
+
+    Content::InputSystem.mDelegateMouseDownAndMoved += this;
+    Content::InputSystem.mDelegateMouseDown += this;
+    Content::InputSystem.mDelegateMouseUp += this;
 
     mCanvos = new TextureCanvos;
 
-    mSelectNode = new GRectNode;
+    mSelectNode = new GTapeNode();
     mSelectNode->setColor ( Color_Pure_Green );
     mSelectNode->setState ( eObjState_Render, false );
     mSelectNode->recreate();
@@ -537,14 +546,82 @@ void ImagePacker::setCurrentFile ( const QString &fileName )
     updateRecentFileActions();
 }
 
+void ImagePacker::clear()
+{
+    ui.comboBox_Image->clearEditText();
+    ui.comboBox_ProjectFile->clearEditText();
+    mSelectNode->setState ( eObjState_Render, false );
+    mCanvos->clear();
+    mTreeModel->clear();
+}
+
+void ImagePacker::selectNode ( const char* name )
+{
+    IPTextureNode* info = gImagePacker.getTexture ( name );
+    if ( info )
+    {
+        mScenePanel->setSelect ( info->getDisplayName() );
+        CXRect rc = info->mRect;
+        GString str;
+        str.Format ( "Name: %s", info->getDisplayName() );
+        ui.label_name->setText ( str.c_str() );
+        str.Format ( "X:%d, Y:%d, R:%d, B:%d", rc.mX, rc.mY, rc.right(), rc.bottom() );
+        ui.label_pos->setText ( str.c_str() );
+        str.Format ( "W:%d, H:%d", rc.mW, rc.mH );
+        ui.label_wh->setText ( str.c_str() );
+        GUINode* n = Content::UIMgr.getNode ( info->getRawName() );
+        if ( n )
+            mSelectNode->setRect ( n->getRect() );
+        mSelectNode->setState ( eObjState_Render, n != nullptr );
+    }
+}
+
+
+void ImagePacker::onSelectionChanged ( const QItemSelection &selected, const QItemSelection &deselected )
+{
+    const QModelIndexList&  indexlist = selected.indexes();
+    if ( indexlist.size() > 0 )
+        onSelect ( indexlist.front() );
+}
+
+void ImagePacker::onSelect ( const QModelIndex& index )
+{
+    QStandardItem* item = mTreeModel->itemFromIndex ( index );
+    QVariant var = item->data ( );
+    if ( var.type() != QVariant::String )
+        return;
+
+    selectNode ( var.toString().toStdString().c_str() );
+}
+
+void ImagePacker::onDeleteTexture ( CXDeleteTextureArg* arg )
+{
+    QStandardItem* item = nullptr;
+    if ( findItem ( mTreeModel->invisibleRootItem(), arg->mName, item ) )
+    {
+        int row = item->index().row();
+        int col = item->index().column();
+        if ( item->parent() )
+        {
+            item->takeChild ( row, col );
+            item->parent()->removeRow ( row );
+        }
+        else
+        {
+            mTreeModel->takeRow ( row );
+        }
+    }
+}
+
+TextureCanvos* ImagePacker::getCanvos() const
+{
+    return mCanvos;
+}
+
+ImagePacker* ImagePacker::mInstance = nullptr;
+
 
 const char* ImagePacker::Option = "Option";
 
 const char* ImagePacker::AppName = "ImagePacker";
 
-TextureInfo::TextureInfo()
-{
-    mSelected = false;
-    mTextureDim = nullptr;
-    mImage = nullptr;
-}

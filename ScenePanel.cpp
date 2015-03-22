@@ -24,8 +24,8 @@ ScenePanel::~ScenePanel()
 void ScenePanel::resizeEvent ( QResizeEvent *szEvent )
 {
     __super::resizeEvent ( szEvent );
-    QRect rc = this->rect();
-     Content::Game.resize ( rc.width(), rc.height() );
+    QRect rc = this->geometry();
+    Content::Game.resize ( rc.width(), rc.height() );
 }
 bool ScenePanel::event ( QEvent* event )
 {
@@ -38,6 +38,17 @@ bool ScenePanel::event ( QEvent* event )
         mMainMenu->exec ( menuEvent->globalPos() );
     }
     break;
+	case  QEvent::WindowActivate:
+		{
+			if(this->focusWidget()==this)
+				Content::Game.active ( true );
+		}
+		break;
+	case QEvent::WindowDeactivate :
+		{
+			Content::Game.active ( false );
+		}
+		break;
     }
     return __super::event ( event );
 }

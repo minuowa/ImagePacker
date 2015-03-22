@@ -31,6 +31,7 @@ void TextureCanvos::recreate()
 {
     this->clear();
     mUI = new GUINode;
+    mUI->setState ( eUINodeState_AcpectEvent, false );
     mUI->setRect ( 0, 0, 1024, 1024 );
     mUI->setColor ( 0X66666666 );
     mUI->recreate();
@@ -49,4 +50,9 @@ void TextureCanvos::clear()
         getUIRootNode()->deleteChild ( mUI );
         mUI = nullptr;
     }
+}
+
+void TextureCanvos::offset ( long x, long y )
+{
+    mUI->offset ( x, y );
 }

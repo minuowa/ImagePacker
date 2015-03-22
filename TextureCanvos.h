@@ -13,6 +13,7 @@ public:
 	TextureCanvos(void);
 	~TextureCanvos(void);
 
+	void offset(long x,long y);
 	void setSize(int w,int h);
 	void setPos(int x,int y);
 	void recreate();

@@ -33,11 +33,6 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="Generated Files\GRelease">
-      <UniqueIdentifier>{281ed672-7d14-4ffe-bd44-b9991a6ca61d}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -70,26 +65,17 @@
     <ClCompile Include="GeneratedFiles\Release\moc_ScenePanel.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\GRelease\moc_ScenePanel.cpp">
-      <Filter>Generated Files\GRelease</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_imagepacker.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_imagepacker.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\GRelease\moc_imagepacker.cpp">
-      <Filter>Generated Files\GRelease</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\Debug\moc_FileListTreeView.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_FileListTreeView.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\GRelease\moc_FileListTreeView.cpp">
-      <Filter>Generated Files\GRelease</Filter>
     </ClCompile>
     <ClCompile Include="IPTexture.cpp">
       <Filter>Source Files</Filter>

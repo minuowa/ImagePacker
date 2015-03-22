@@ -7,14 +7,6 @@
 class FileListTreeView;
 class ScenePanel;
 class IPTexture;
-class GTexture;
-struct TextureInfo
-{
-    IPTexture* mTextureDim;
-    GTexture* mImage;
-    bool mSelected;
-    TextureInfo();
-};
 class ImagePacker : public QMainWindow, public CXCallBack
 {
 public:
@@ -27,7 +19,7 @@ public:
     ~ImagePacker();
 
     virtual void onCallBack ( const CXDelegate& d, CXEventArgs* e );
-
+	TextureCanvos* getCanvos() const;
 protected:
     void loadProject ( const char* name );
     void createMenus();
@@ -39,6 +31,7 @@ protected:
 
     virtual void timerEvent ( QTimerEvent * );
     bool event ( QEvent * e );
+    void onSelect ( const QModelIndex& index );
 private slots:
     void newFile();
     void open();
@@ -48,23 +41,26 @@ private slots:
     void browseProject();
     void saveConfig();
     bool openRecentFile( );
-    void onClicked ( const QModelIndex &index );
+public slots:
+    void onSelectionChanged ( const QItemSelection &selected, const QItemSelection &deselected );
+
 private:
     bool findTreeItem ( QStandardItemModel* model, const char* fileOrPath, QStandardItem*& outItem );
     bool findItem ( QStandardItem* item, const char* fileOrPath, QStandardItem*& outItem );
 
-    TextureInfo* getItemString ( const CXRect& rc );
-
-    void selectTreeItem ( const char* orignalFileName );
-
     void onCalTexturePos();
-    void addPathTexture ( CXAddTextureArg* arg );
-    void directAddTexture ( CXAddTextureArg* arg );
-    void onChangeHoveredNode ( GUIHoverNodeChangedEvent* arg );
+	void onDeleteTexture ( CXDeleteTextureArg* arg );
+	void onAddPath( CXAddTextureArg* arg );
+	void onAddTexture ( CXAddTextureArg* arg );
+    void onClickedNode ( GUINode* node );
 
     void updateRecentFileActions();
     QString strippedName ( const QString &fullFileName );
     void setCurrentFile ( const QString &fileName );
+    void clear();
+    void selectNode ( const char* name );
+public:
+    static ImagePacker* mInstance;
 private:
 
     QSettings mOptionSetting;
@@ -93,10 +89,7 @@ private:
 
     ScenePanel* mScenePanel;
 
-    CXMap<GString, TextureInfo*> mTextureMap;
-
     TextureCanvos* mCanvos;
-
     GRectNode* mSelectNode;
 
 

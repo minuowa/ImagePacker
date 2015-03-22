@@ -15,14 +15,20 @@ public:
 	void selectItem(QStandardItem* item);
 private:
     Ui::FileListTreeView ui;
+	QMenu* mMainMenu;
 signals:
     void changed ( const QMimeData *mimeData = 0 );
 public Q_SLOTS:
+	void deleteImage();
 protected:
     void dragEnterEvent ( QDragEnterEvent *event );
     void dragMoveEvent ( QDragMoveEvent *event );
     void dragLeaveEvent ( QDragLeaveEvent *event );
     void dropEvent ( QDropEvent *event );
+	bool event ( QEvent *event );
+	QString getSelectImage() const;
+	QString mSeledtImage;
+
 };
 
 #endif // FILELISTTREEVIEW_H
